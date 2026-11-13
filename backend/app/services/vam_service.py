@@ -1,4 +1,4 @@
-"""对赌协议推演服务：复用 vam_sandbox 的双 Agent 流水线。"""
+"""合同情景推演与决策评分服务：复用 vam_sandbox 的双 Agent 流水线。"""
 
 import sys
 from pathlib import Path

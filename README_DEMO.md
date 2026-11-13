@@ -1,4 +1,4 @@
-# 签之前：合同核验 + 对赌协议推演
+# 签之前：合同核验 + 合同情景推演与决策评分
 
 基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent) 的课程项目。
 
@@ -24,7 +24,7 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 - 双栏 PDF 证据定位与关键词高亮；
 - MCP 工具计算退款、总成本、租房首期。
 
-### 对赌协议推演
+### 合同情景推演与决策评分
 
 - 双 Agent：发散推演 + 收敛评估；
 - React Flow 决策树；
@@ -83,7 +83,7 @@ backend/
   requirements.txt
 
 frontend/
-  src/App.tsx                 # 三个页面：合同核验 / 对赌推演 / 资金流
+  src/App.tsx                 # 三个页面：合同核验 / 合同情景推演与决策评分 / 资金流
   src/components/
     ContractPage.tsx          # 双栏 PDF 高亮
     VamPage.tsx               # React Flow 决策树

@@ -32,7 +32,7 @@ function buildGraph(tree: VamResult['tree']) {
   function walk(node: VamTreeNode, depth: number, parentId?: string) {
     const y = order * 130
     order += 1
-    const risk = node.evaluation?.risk ?? node._risk ?? 5
+    const risk = node.evaluation?.risk_score ?? node._risk ?? 5
     nodes.push({
       id: node.id,
       position: { x: depth * 280, y },
@@ -139,7 +139,7 @@ export function VamPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">对赌协议推演沙盘</h1>
+        <h1 className="text-2xl font-bold tracking-tight">合同情景推演与决策评分</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
           输入对赌条款或关键决策背景，系统用两个 Agent 先生成情景分支、再打分排序，最后渲染成可展开的决策树。
           结果只是情景推演，不是真实预测，也不构成投资或法律建议。
@@ -225,7 +225,10 @@ export function VamPage() {
                         <th className="border border-border px-2 py-1 text-left">排序</th>
                         <th className="border border-border px-2 py-1 text-left">分支</th>
                         <th className="border border-border px-2 py-1 text-left">总分</th>
-                        <th className="border border-border px-2 py-1 text-left">风险</th>
+                        <th className="border border-border px-2 py-1 text-left">违约风险</th>
+                        <th className="border border-border px-2 py-1 text-left">可行性</th>
+                        <th className="border border-border px-2 py-1 text-left">预期损失</th>
+                        <th className="border border-border px-2 py-1 text-left">置信度</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -235,9 +238,28 @@ export function VamPage() {
                           <td className="border border-border px-2 py-1">{r.branch}</td>
                           <td className="border border-border px-2 py-1">{r.total_score}</td>
                           <td className="border border-border px-2 py-1">
-                            <Badge variant={r.risk >= 7 ? 'red' : r.risk >= 4 ? 'yellow' : 'green'}>
-                              {r.risk}
+                            <Badge
+                              variant={
+                                r.risk_score === null
+                                  ? 'secondary'
+                                  : r.risk_score >= 7
+                                    ? 'red'
+                                    : r.risk_score >= 4
+                                      ? 'yellow'
+                                      : 'green'
+                              }
+                            >
+                              {r.risk_score === null ? '信息不足' : r.risk_score}
                             </Badge>
+                          </td>
+                          <td className="border border-border px-2 py-1">
+                            {r.feasibility_score === null ? '信息不足' : r.feasibility_score}
+                          </td>
+                          <td className="border border-border px-2 py-1">
+                            {r.loss_score === null ? '信息不足' : r.loss_score}
+                          </td>
+                          <td className="border border-border px-2 py-1">
+                            {r.confidence === null ? '信息不足' : r.confidence}
                           </td>
                         </tr>
                       ))}

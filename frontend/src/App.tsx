@@ -7,7 +7,7 @@ type Tab = 'contract' | 'vam' | 'cashflow'
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'contract', label: '合同核验' },
-  { key: 'vam', label: '对赌协议推演' },
+  { key: 'vam', label: '合同情景推演与决策评分' },
   { key: 'cashflow', label: '资金流' },
 ]
 

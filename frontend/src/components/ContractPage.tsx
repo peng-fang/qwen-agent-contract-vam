@@ -107,7 +107,7 @@ export function ContractPage({ onOpenVam }: ContractPageProps) {
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 sm:w-auto"
             onClick={onOpenVam}
           >
-            🚀 打开对赌协议推演沙盘 →
+            🚀 打开合同情景推演与决策评分 →
           </Button>
         </CardContent>
       </Card>
