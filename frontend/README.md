@@ -37,7 +37,6 @@ http://127.0.0.1:8001
 
 ## 后端
 
-后端启动方式见 `../backend/README.md`。Gradio 旧前端仍保留在：
+后端启动方式见 `../backend/README.md`。
 
-- http://127.0.0.1:7860
-- http://127.0.0.1:7861
+> Gradio 旧前端已移除，当前只保留 React 前端 + FastAPI 后端。

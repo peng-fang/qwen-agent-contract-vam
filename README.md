@@ -15,18 +15,20 @@ limitations under the License.
 -->
 
 <!-- 课程项目入口：以下为本地新增内容，Qwen-Agent 原始 README 从下一节开始。 -->
-> # 签之前：消费合同核验
+> # 签之前：消费合同核验 + 对赌协议推演
 >
 > 本仓库是 NLP / Agent 课程项目，基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent)（Apache-2.0）二次开发。
 >
 > - **合同核验**：上传宣传材料 + 合同，核验退款、违约金、自动续费、服务期限、额外收费五类条款，并调用 MCP 工具计算金额。
-> - **对赌协议推演(创新功能）**：双 Agent「发散推演 + 收敛评估」生成可展开决策树，支持沿分支继续推演、回溯和导出 Markdown 报告。
+> - **对赌协议推演（创新功能）**：双 Agent「发散推演 + 收敛评估」生成可展开决策树，支持沿分支继续推演、回溯和导出 Markdown 报告。
 >
 > 快速启动、演示步骤、功能与限制见 **[README_DEMO.md](README_DEMO.md)**。
 >
 > 项目文档：[部署验证报告](docs/部署验证报告.md) · [租房合同金额核对](docs/租房合同金额核对.md)
 >
-> 两个本地页面：合同核验 `http://127.0.0.1:7860`；对赌推演 `http://127.0.0.1:7861`。
+> 前端：React + TypeScript + Vite（`frontend/`）；后端：FastAPI（`backend/`）。
+>
+> 默认地址：<http://localhost:5173>（开发）或 <http://127.0.0.1:8001>（生产构建）。
 >
 > ---
 >

@@ -10,9 +10,13 @@ import {
 import '@xyflow/react/dist/style.css'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { deepenVam, exportVam, runVam, type VamResult, type VamTreeNode } from '@/lib/api'
+
+const EXAMPLES = [
+  '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
+  '某消费品牌以 1.2 亿元估值融资 3000 万元，签对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报；否则按年化 12% 回购，或向投资人补偿股权。请推演 3 年后可能的结局和最优策略。',
+]
 
 function riskColor(risk: number): string {
   if (risk >= 7) return '#fee2e2'
@@ -62,11 +66,6 @@ function buildGraph(tree: VamResult['tree']) {
   return { nodes, edges }
 }
 
-const EXAMPLES = [
-  '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
-  '某消费品牌以 1.2 亿元估值融资 3000 万元，签对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报；否则按年化 12% 回购，或向投资人补偿股权。请推演 3 年后可能的结局和最优策略。',
-]
-
 export function VamPage() {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState<VamResult | null>(null)
@@ -83,7 +82,7 @@ export function VamPage() {
     setResult(null)
     setReport('')
     if (!query.trim()) {
-      setError('请输入对赌条款或决策背景。')
+      setError('请输入要推演的对赌条款或决策背景。')
       return
     }
     setLoading(true)
@@ -139,30 +138,35 @@ export function VamPage() {
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>对赌协议推演</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm leading-6 text-muted-foreground">
-            输入对赌条款或关键决策背景，系统用两个 Agent 先生成情景分支、再打分排序，最后渲染成可展开的决策树。
-            结果只是情景推演，不是真实预测，也不构成投资或法律建议。
-          </p>
-          <Textarea
-            placeholder="例如：创业者融资 1000 万，签对赌：3 年净利润累计达到 3000 万，否则年化 8% 回购或股权补偿。"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-          <div className="flex flex-wrap gap-2">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">对赌协议推演沙盘</h1>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          输入对赌条款或关键决策背景，系统用两个 Agent 先生成情景分支、再打分排序，最后渲染成可展开的决策树。
+          结果只是情景推演，不是真实预测，也不构成投资或法律建议。
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
+        <div className="space-y-4">
+          <div className="rounded-lg border border-border bg-background p-4 shadow-sm">
+            <label className="mb-1 block text-sm font-medium">对赌条款 / 决策背景</label>
+            <Textarea
+              className="min-h-[170px]"
+              placeholder="例：融资 1000 万，3 年净利润对赌 3000 万，否则年化 8% 回购或股权补偿……"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
             <Button
-              className="bg-orange-500 text-white hover:bg-orange-600"
+              className="mt-4 w-full bg-orange-500 text-white hover:bg-orange-600"
               onClick={run}
               disabled={loading}
             >
               {loading ? '推演中…' : '开始推演'}
             </Button>
+
+            <label className="mb-1 mt-4 block text-sm font-medium">选择叶子分支</label>
             <select
-              className="rounded-md border border-border bg-background px-2 py-1 text-sm"
+              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
               value={selectedLeaf}
               onChange={(e) => setSelectedLeaf(e.target.value)}
               disabled={!result}
@@ -173,124 +177,108 @@ export function VamPage() {
                 </option>
               ))}
             </select>
-            <Button variant="secondary" onClick={deepen} disabled={!result || loading}>
-              继续推演
+
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <Button variant="secondary" onClick={deepen} disabled={!result || loading}>
+                沿此分支继续推演
+              </Button>
+              <Button variant="secondary" onClick={back} disabled={!result}>
+                回溯一步
+              </Button>
+            </div>
+
+            <Button className="mt-3 w-full" variant="secondary" onClick={download} disabled={!result}>
+              导出 Markdown 报告
             </Button>
-            <Button variant="outline" onClick={back} disabled={!result}>
-              回溯
-            </Button>
-            <Button variant="outline" onClick={download} disabled={!result}>
-              导出报告
-            </Button>
+
+            <div className="mt-4 min-h-[170px] rounded-md border border-dashed border-border p-3">
+              <div className="text-xs text-muted-foreground">📄 下载报告</div>
+              <div className="mt-10 text-center">
+                {report ? (
+                  <a
+                    className="text-sm font-medium text-blue-600 underline"
+                    href={`data:text/markdown;charset=utf-8,${encodeURIComponent(report)}`}
+                    download="vam_report.md"
+                  >
+                    下载 Markdown 报告
+                  </a>
+                ) : (
+                  <span className="text-4xl text-muted-foreground/40">📄</span>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <h2 className="text-lg font-semibold">结果</h2>
+              {!result ? (
+                <p className="mt-1 text-sm text-muted-foreground">（等待输入）</p>
+              ) : (
+                <div className="mt-2 space-y-2 text-sm">
+                  <div>
+                    <span className="font-medium">推荐路径：</span>
+                    {result.best.path?.join(' → ')}（{result.best.branch}） — 总分{' '}
+                    {result.best.total_score} / 100
+                  </div>
+                  <table className="w-full border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="border border-border px-2 py-1 text-left">排序</th>
+                        <th className="border border-border px-2 py-1 text-left">分支</th>
+                        <th className="border border-border px-2 py-1 text-left">总分</th>
+                        <th className="border border-border px-2 py-1 text-left">风险</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {result.ranked.map((r, i) => (
+                        <tr key={r.leaf_id}>
+                          <td className="border border-border px-2 py-1">{i + 1}</td>
+                          <td className="border border-border px-2 py-1">{r.branch}</td>
+                          <td className="border border-border px-2 py-1">{r.total_score}</td>
+                          <td className="border border-border px-2 py-1">
+                            <Badge variant={r.risk >= 7 ? 'red' : r.risk >= 4 ? 'yellow' : 'green'}>
+                              {r.risk}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            <details className="mt-4 rounded-md border border-border">
+              <summary className="cursor-pointer px-3 py-2 text-sm text-muted-foreground">
+                原始 JSON（调试用）
+              </summary>
+              <pre className="max-h-72 overflow-auto border-t border-border p-3 text-xs">
+                {result ? JSON.stringify(result, null, 2) : '（暂无数据）'}
+              </pre>
+            </details>
+
+            {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
           </div>
-          {error && <div className="text-sm text-red-600">{error}</div>}
-        </CardContent>
-      </Card>
+        </div>
 
-      {result && (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>推荐路径</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm">
-              <div>
-                <span className="font-medium">{result.best.path?.join(' → ')}</span>
-                {'（' + result.best.branch + '）'} — 总分 {result.best.total_score} / 100
+        <div className="min-w-0">
+          <div className="h-[640px] rounded-lg border border-border bg-background shadow-sm">
+            {result ? (
+              <ReactFlow nodes={graph.nodes} edges={graph.edges} fitView>
+                <Background />
+                <Controls />
+              </ReactFlow>
+            ) : (
+              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                决策树将在这里显示
               </div>
-            </CardContent>
-          </Card>
+            )}
+          </div>
+        </div>
+      </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>分支评分排序</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="bg-muted">
-                    <th className="border border-border px-2 py-1 text-left">排序</th>
-                    <th className="border border-border px-2 py-1 text-left">分支</th>
-                    <th className="border border-border px-2 py-1 text-left">总分</th>
-                    <th className="border border-border px-2 py-1 text-left">风险</th>
-                    <th className="border border-border px-2 py-1 text-left">概率</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.ranked.map((r, i) => (
-                    <tr key={r.leaf_id}>
-                      <td className="border border-border px-2 py-1">{i + 1}</td>
-                      <td className="border border-border px-2 py-1">{r.branch}</td>
-                      <td className="border border-border px-2 py-1">{r.total_score}</td>
-                      <td className="border border-border px-2 py-1">
-                        <Badge variant={r.risk >= 7 ? 'red' : r.risk >= 4 ? 'yellow' : 'green'}>
-                          {r.risk}
-                        </Badge>
-                      </td>
-                      <td className="border border-border px-2 py-1">{r.probability}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>决策树</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div style={{ height: 520 }}>
-                <ReactFlow nodes={graph.nodes} edges={graph.edges} fitView>
-                  <Background />
-                  <Controls />
-                </ReactFlow>
-              </div>
-            </CardContent>
-          </Card>
-        </>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>下载报告</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {report ? (
-            <a
-              className="text-sm font-medium text-blue-600 underline"
-              href={`data:text/markdown;charset=utf-8,${encodeURIComponent(report)}`}
-              download="vam_report.md"
-            >
-              下载 Markdown 报告
-            </a>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              推演完成后点击「导出报告」生成 Markdown 文件。
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>原始 JSON（调试用）</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <details>
-            <summary className="cursor-pointer text-sm text-muted-foreground">展开 / 收起</summary>
-            <pre className="mt-3 max-h-96 overflow-auto rounded-md bg-muted p-3 text-xs">
-              {result ? JSON.stringify(result, null, 2) : '（暂无数据）'}
-            </pre>
-          </details>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">示例</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
+      <div>
+        <h2 className="mb-2 text-base font-semibold">示例</h2>
+        <div className="space-y-2">
           {EXAMPLES.map((e) => (
             <button
               key={e}
@@ -300,8 +288,8 @@ export function VamPage() {
               {e}
             </button>
           ))}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

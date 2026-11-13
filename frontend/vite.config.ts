@@ -13,6 +13,11 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    watch: {
+      usePolling: true,
+      interval: 200,
+      ignored: ['**/node_modules/**', '**/.*/**', '**/.*'],
+    },
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8001',
