@@ -6,6 +6,8 @@ __pycache__
 # 本地生成、可能含个人信息或临时报告，不进入版本库
 demo_data/ui_lease_money.png
 demo_data/vam_report_*.md
+backend/uploads/
+backend/workspace/
 
 .idea
 .vscode
