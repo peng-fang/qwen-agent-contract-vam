@@ -26,6 +26,8 @@ limitations under the License.
 >
 > 项目文档：[部署验证报告](docs/部署验证报告.md) · [租房合同金额核对](docs/租房合同金额核对.md)
 >
+> 协作任务：[Markdown 任务清单](docs/PROJECT_TASKS.md) · [下一轮实验计划](research/evidence-budget/NEXT_STEPS.md)（本分支计划，尚未合并 main）
+>
 > 两个本地页面：合同核验 `http://127.0.0.1:7860`；对赌推演 `http://127.0.0.1:7861`。
 >
 > ---

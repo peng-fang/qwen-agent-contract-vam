@@ -2,7 +2,7 @@
 
 日期：2026-11-14。分支：`research/evidence-budget`。基于远端 `88c7bb5`；此次只写研究计划，不改现有应用或框架，不合并 main。
 
-本次补充核验：[访问权限与 fork 关系](ACCESS.md)、[三条研究路线与源码接入边界](ARCHITECTURE.md)。GitHub 元数据确认 `fork=false`，但代码明确派生自上游。连接器当前仍 404，本机 Git/API 已验证可读写；现有六条 issues 已在线核对，复用而不重复创建。
+本次补充核验：[访问权限与 fork 关系](ACCESS.md)、[三条研究路线与源码接入边界](ARCHITECTURE.md)。GitHub 元数据确认 `fork=false`，但代码明确派生自上游。连接器当前仍 404，本机 Git/API 已验证可读写；七条任务与已有技术补充已迁移到 [Markdown 清单](../../docs/PROJECT_TASKS.md)，旧 issues 撤回后仅留作历史。下一轮范围见 [NEXT_STEPS.md](NEXT_STEPS.md)。
 
 ## 方向与关系
 
@@ -71,9 +71,9 @@ Qwen-Agent 是提供模型、工具调用、文件检索和界面组件的框架
 
 ## 与基础任务的接口
 
-已创建任务：[#1 证据定位](https://github.com/peng-fang/qwen-agent-contract-vam/issues/1)、[#2 计算前条件核验](https://github.com/peng-fang/qwen-agent-contract-vam/issues/2)、[#3 沙盘缺失评分](https://github.com/peng-fang/qwen-agent-contract-vam/issues/3)、[#4 环境复现](https://github.com/peng-fang/qwen-agent-contract-vam/issues/4)、[#5 评测基础](https://github.com/peng-fang/qwen-agent-contract-vam/issues/5)。本实验跟踪在 [#6](https://github.com/peng-fang/qwen-agent-contract-vam/issues/6)。均未预先指派组员，不把 issue 创建视为已认领。
+任务与技术补充统一维护在 [PROJECT_TASKS.md](../../docs/PROJECT_TASKS.md)。T01–T05 是组内可认领的基础任务，R01 是我们的扩展实验，C01 是协作访问核对。旧 issues #1–#7 撤回后不再用于认领和进度管理。
 
-组内基础工作通过 GitHub issues 认领：证据定位、计算前条件核验、沙盘缺失评分、环境复现、小型轨迹评测。依赖只有统一的证据／轨迹 schema，不要求所有任务完成才能实验。
+各成员通过修改 Markdown 的负责人、状态和验收项协作。实验只依赖最小证据/轨迹格式，不要求所有基础功能完成才能启动。
 
 基础功能无人认领时，再判断是否需要补最小接口；不要把所有基础开发默认为我们的责任。实验适配先放本分支，用同一输入／输出格式；成熟且有用的通用改动再单独提 PR。
 
@@ -93,7 +93,7 @@ research/evidence-budget/
 
 ## 时间与下一步
 
-1. 11 月 14 日：发布可认领任务与计划，先完成较强模型的实验有效性诊断。
+1. 11 月 14 日：将任务改为 Markdown 协作，确定下一轮较强模型的实验有效性诊断；具体执行见 NEXT_STEPS.md，当前未新增模型运行。
 2. 11 月 15 日 proposal 前：据实际诊断写清目标、方法、评价与备选路线，不承诺已经改进；提交截止为 11 月 15 日 23:59。
 3. 后续先固定小型合同案例与对照，再选择一个最值得改进的机制；11 月 30 日展示仍以课堂口头安排为依据，待正式通知复核。
 

@@ -62,9 +62,9 @@ Assistant 里是 `if not knowledge: ... self.mem.run(...)`。因此无证据对�
 
 ## 基础任务如何协作
 
-复用已有 [#1 证据定位](https://github.com/peng-fang/qwen-agent-contract-vam/issues/1)、[#2 条件与参数](https://github.com/peng-fang/qwen-agent-contract-vam/issues/2)、[#3 缺失评分](https://github.com/peng-fang/qwen-agent-contract-vam/issues/3)、[#4 环境](https://github.com/peng-fang/qwen-agent-contract-vam/issues/4)、[#5 评测](https://github.com/peng-fang/qwen-agent-contract-vam/issues/5)，由组员认领，不预先指定负责人。
+基础工作统一在 [Markdown 清单 T01–T05](../../docs/PROJECT_TASKS.md#任务总览) 认领：证据定位、条件与参数、缺失评分、环境和最小评测。通过修改负责人、状态和验收项协作，不预先指定其他组员。
 
-我们的实验跟踪在 [#6](https://github.com/peng-fang/qwen-agent-contract-vam/issues/6)。它只依赖最小证据/轨迹格式，不必等证据高亮、标注界面或完整业务流水线全部完成。基础任务无人认领时，再决定是否补其中真正阻塞实验的部分。
+我们的实验对应 R01，下一轮见 [NEXT_STEPS.md](NEXT_STEPS.md)。旧 issues #1–#7 撤回后仅保留历史；实验只依赖最小证据/轨迹格式，不必等待完整证据高亮、标注界面或业务流水线。基础任务无人认领时，再决定是否补真正阻塞实验的部分。
 
 ## 资料与实现边界
 
