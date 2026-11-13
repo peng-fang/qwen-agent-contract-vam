@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+python-multipart
+aiofiles
+sse-starlette
+# qwen-agent 与 qwen_agent 依赖已由项目主环境安装
