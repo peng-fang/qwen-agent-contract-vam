@@ -99,3 +99,88 @@ export async function exportVam(result: VamResult) {
   const res = await axios.post<{ markdown: string }>('/api/vam/export', { result })
   return res.data.markdown
 }
+
+export type ClauseType =
+  | 'refund'
+  | 'penalty'
+  | 'auto_renewal'
+  | 'service_term'
+  | 'extra_fee'
+
+export type ClauseVerdict =
+  | 'consistent'
+  | 'conflict'
+  | 'missing_in_contract'
+  | 'missing_in_promo'
+  | 'missing_both'
+  | 'unclear'
+
+export interface ClauseEvidence {
+  document_id: string
+  filename: string
+  role: string
+  page: number
+  chunk_id: string
+  char_start: number
+  char_end: number
+  quote: string
+}
+
+export interface ClauseFields {
+  amounts: number[]
+  rates: number[]
+  per_unit_amounts: { amount: number; unit: string }[]
+  durations: { value: number; unit: string }[]
+  dates: string[]
+  notice_days: number | null
+  conditions: string[]
+  flags: Record<string, boolean>
+  clause_ref: string
+}
+
+export interface ExtractedClause {
+  clause_type: ClauseType
+  clause_label: string
+  evidence: ClauseEvidence
+  fields: ClauseFields
+  confidence: number
+  extractor: string
+}
+
+export interface ClauseSide {
+  clause_refs: string[]
+  fields: ClauseFields
+  evidences: ClauseEvidence[]
+}
+
+export interface ClauseMatch {
+  clause_type: ClauseType
+  clause_label: string
+  verdict: ClauseVerdict
+  verdict_label: string
+  reasons: string[]
+  promo: ClauseSide | null
+  contract: ClauseSide | null
+  compared: Record<string, unknown>
+}
+
+export interface ClauseExtractionResult {
+  documents: {
+    document_id: string
+    filename: string
+    role: string
+    pages: { page: number; text: string }[]
+  }[]
+  clauses: ExtractedClause[]
+  matches: ClauseMatch[]
+  extractor: string
+  warnings: string[]
+}
+
+export async function extractClauses(files: File[], roles?: string[]) {
+  const form = new FormData()
+  files.forEach((file) => form.append('files', file))
+  if (roles?.length) form.append('roles', roles.join(','))
+  const res = await axios.post<ClauseExtractionResult>('/api/contract/clauses', form)
+  return res.data
+}
