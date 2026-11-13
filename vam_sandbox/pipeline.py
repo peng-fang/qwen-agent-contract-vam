@@ -15,12 +15,19 @@ import copy
 import json
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import json5
 import requests
+from dotenv import load_dotenv
 
 from qwen_agent.llm import get_chat_model
+
+# 本地 .env：仓库根目录 / backend/.env（不提交）
+_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(_ROOT / '.env')
+load_dotenv(_ROOT / 'backend' / '.env')
 
 # ---------------------------------------------------------------------------
 # 提示词
@@ -405,26 +412,57 @@ def _propagate_risk(tree: Dict[str, Any]) -> None:
 def _scorer_config() -> Dict[str, str]:
     return {
         'url': os.getenv('VAM_SCORER_URL', '').strip(),
-        'api_key': os.getenv('VAM_SCORER_API_KEY', os.getenv('DASHSCOPE_API_KEY', '')).strip(),
-        'model': os.getenv('VAM_SCORER_MODEL', 'deepseek-v4-pro-high').strip(),
+        'api_key': os.getenv('VAM_SCORER_API_KEY', '').strip(),
+        'model': os.getenv('VAM_SCORER_MODEL', 'deepseek-chat').strip(),
+        'style': os.getenv('VAM_SCORER_API_STYLE', 'auto').strip().lower(),
     }
 
 
 def _harness_score(contract_text: str, scenario_text: str) -> Tuple[Dict[str, Any], str]:
     cfg = _scorer_config()
-    payload = {
-        'system_prompt': SCORER_SYSTEM,
-        'user': f'合同原文：{contract_text}\n待评估推演情景：{scenario_text}',
-        'model': cfg['model'],
-    }
+    url = cfg['url']
+    style = cfg['style'] or 'auto'
+    if style == 'auto':
+        if 'api.deepseek.com' in url or url.rstrip('/').endswith('/chat/completions'):
+            style = 'openai'
+        else:
+            style = 'harness'
+
     headers = {'Content-Type': 'application/json'}
     if cfg['api_key']:
         headers['Authorization'] = f'Bearer {cfg["api_key"]}'
 
-    resp = requests.post(cfg['url'], json=payload, headers=headers, timeout=180)
+    user_text = f'合同原文：{contract_text}\n待评估推演情景：{scenario_text}'
+
+    if style == 'openai':
+        payload = {
+            'model': cfg['model'],
+            'messages': [
+                {'role': 'system', 'content': SCORER_SYSTEM},
+                {'role': 'user', 'content': user_text},
+            ],
+            'temperature': 0,
+            'max_tokens': 300,
+            'stream': False,
+        }
+    else:
+        payload = {
+            'system_prompt': SCORER_SYSTEM,
+            'user': user_text,
+            'model': cfg['model'],
+        }
+
+    resp = requests.post(url, json=payload, headers=headers, timeout=180)
     resp.raise_for_status()
     data = resp.json()
-    content = data.get('content') or data.get('data', {}).get('content') or data.get('text') or ''
+
+    if isinstance(data, dict) and data.get('choices'):
+        content = data['choices'][0]['message']['content']
+    elif isinstance(data, dict):
+        content = data.get('content') or data.get('data', {}).get('content') or data.get('text') or ''
+    else:
+        content = str(data)
+
     if isinstance(content, dict):
         content = json.dumps(content, ensure_ascii=False)
     return _extract_json(str(content)), str(content)
@@ -441,13 +479,28 @@ def _local_score(
     return _generate_json(cfg, SCORER_SYSTEM, user, temperature=temperature, max_tokens=max_tokens)
 
 
+def _intern_score(contract_text: str, scenario_text: str) -> Tuple[Dict[str, Any], str]:
+    url = os.getenv('VAM_INTERN_URL', 'http://127.0.0.1:8010/score').strip()
+    resp = requests.post(
+        url,
+        json={'contract_text': contract_text, 'scenario_text': scenario_text},
+        timeout=300,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return data, json.dumps(data, ensure_ascii=False)
+
+
 def _score_leaf(
     cfg: Dict[str, Any],
     contract_text: str,
     scenario_text: str,
 ) -> Tuple[Dict[str, Any], str]:
+    provider = os.getenv('VAM_SCORER_PROVIDER', 'auto').strip().lower()
     scorer = _scorer_config()
-    if scorer['url']:
+    if provider == 'intern':
+        return _intern_score(contract_text, scenario_text)
+    if provider == 'harness' or (provider == 'auto' and scorer['url']):
         return _harness_score(contract_text, scenario_text)
     return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
 
