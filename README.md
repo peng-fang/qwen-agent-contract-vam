@@ -20,7 +20,6 @@ limitations under the License.
 > 本仓库是 NLP / Agent 课程项目，基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent)（Apache-2.0）二次开发。
 >
 > - **合同核验**：上传宣传材料 + 合同，核验退款、违约金、自动续费、服务期限、额外收费五类条款，并调用 MCP 工具计算金额。
-> - **对赌协议推演（创新功能）**：双 Agent「发散推演 + 收敛评估」生成可展开决策树，支持沿分支继续推演、回溯和导出 Markdown 报告。
 >
 > 快速启动、演示步骤、功能与限制见 **[README_DEMO.md](README_DEMO.md)**。
 >
