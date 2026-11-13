@@ -107,17 +107,18 @@ def _render_node(node: Dict[str, Any], depth: int) -> str:
     inner += _meta_list('收益', node.get('upsides', []))
     inner += _meta_list('风险', node.get('risks', []))
     inner += _meta_list('关键变量', node.get('key_variables', []))
-    if ev.get('recommendation'):
-        inner += _meta_list('建议', [ev['recommendation']])
-    inner += _meta_list('打分理由', ev.get('reasons', []))
+    if ev.get('evidence'):
+        inner += _meta_list('证据依据', [ev['evidence']])
+
+    def _fmt_score(v: Any) -> str:
+        return '信息不足' if v is None else _fmt(v)
 
     metrics = (
         f'<div class="vam-meta"><span class="label">评分：</span>'
-        f'收益 {_fmt(ev.get("benefit", 5))} / 10；'
-        f'风险 {_fmt(ev.get("risk", 5))} / 10；'
-        f'概率 {_fmt(ev.get("probability", 0.5), 2)}；'
-        f'代价 {_fmt(ev.get("cost", 5))} / 10；'
-        f'机会成本 {_fmt(ev.get("opportunity_cost", 5))} / 10'
+        f'违约风险 {_fmt_score(ev.get("risk_score"))} / 10；'
+        f'落地可行性 {_fmt_score(ev.get("feasibility_score"))} / 10；'
+        f'预期损失 {_fmt_score(ev.get("loss_score"))} / 10；'
+        f'置信度 {_fmt_score(ev.get("confidence"))}'
         f'</div>'
     )
     inner = metrics + inner
@@ -154,17 +155,17 @@ def _render_node_markdown(node: Dict[str, Any], depth: int, lines: List[str]) ->
             lines.extend(f'  - {i}' for i in items)
     ev = node.get('evaluation')
     if ev:
+        def _md(v: Any) -> str:
+            return '信息不足' if v is None else str(v)
         lines.append(
             f'- 评分：总分 {ev.get("total_score", 0)}；'
-            f'收益 {ev.get("benefit", 0)}；风险 {ev.get("risk", 0)}；'
-            f'概率 {ev.get("probability", 0):.2f}；代价 {ev.get("cost", 0)}；'
-            f'机会成本 {ev.get("opportunity_cost", 0)}'
+            f'违约风险 {_md(ev.get("risk_score"))} / 10；'
+            f'落地可行性 {_md(ev.get("feasibility_score"))} / 10；'
+            f'预期损失 {_md(ev.get("loss_score"))} / 10；'
+            f'置信度 {_md(ev.get("confidence"))}'
         )
-        if ev.get('recommendation'):
-            lines.append(f'- 建议：{ev["recommendation"]}')
-        if ev.get('reasons'):
-            lines.append('- 理由：')
-            lines.extend(f'  - {r}' for r in ev['reasons'])
+        if ev.get('evidence'):
+            lines.append(f'- 证据依据：{ev["evidence"]}')
     for child in node.get('children', []):
         _render_node_markdown(child, depth + 1, lines)
 
@@ -175,7 +176,7 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
     best = result.get('best', {})
 
     lines: List[str] = [
-        '# 对赌协议推演报告',
+        '# 合同情景推演与决策评分报告',
         '',
         f'## 场景\n\n{tree.get("scenario", "")}',
         '',
@@ -201,13 +202,15 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
     if ranked:
         lines.append('## 分支评分排序')
         lines.append('')
-        lines.append('| 排序 | 分支 | 总分 | 风险 | 概率 | 收益 | 代价 | 机会成本 |')
-        lines.append('| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |')
+        lines.append('| 排序 | 分支 | 总分 | 违约风险 | 可行性 | 预期损失 | 置信度 |')
+        lines.append('| --- | --- | ---: | ---: | ---: | ---: | ---: |')
         for i, r in enumerate(ranked, 1):
+            def _cell(v: Any) -> str:
+                return '信息不足' if v is None else str(v)
             lines.append(
                 f'| {i} | {r.get("branch", "")} | {r.get("total_score", 0)} '
-                f'| {r.get("risk", 0)} | {r.get("probability", 0):.2f} '
-                f'| {r.get("benefit", 0)} | {r.get("cost", 0)} | {r.get("opportunity_cost", 0)} |'
+                f'| {_cell(r.get("risk_score"))} | {_cell(r.get("feasibility_score"))} '
+                f'| {_cell(r.get("loss_score"))} | {_cell(r.get("confidence"))} |'
             )
         lines.append('')
 

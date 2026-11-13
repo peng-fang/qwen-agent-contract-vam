@@ -1,4 +1,4 @@
-"""双 Agent 对赌协议推演流水线。
+"""双 Agent 合同情景推演与决策评分流水线。
 
 只依赖 Qwen-Agent 的 LLM 抽象（`get_chat_model`），不引入额外框架。
 两个 Agent 都是同一类 LLM 的不同"角色提示词"，采用"先发散、后收敛"的两段式调用，
@@ -12,11 +12,13 @@
 """
 
 import copy
+import json
 import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
 import json5
+import requests
 
 from qwen_agent.llm import get_chat_model
 
@@ -72,39 +74,25 @@ JSON schema（严格按此结构）：
 }
 """
 
-EVALUATE_SYSTEM = """你是一个"决策评估"Agent，负责收敛推演结果。
+SCORER_SYSTEM = """你是决策打分评估Agent，服务于【合同情景推演与决策评分】系统，专门针对合同推演分支情景做风险、可行性、损失评估打分。
+规则：
+1. 输入：合同原始条款 + 一条推演分支完整情景描述；
+2. 打分维度（0~10分）：
+   - risk_score：违约风险分，分数越高代表违约可能性越高
+   - feasibility_score：方案落地可行性分，分数越高代表该情景方案越容易落地实现
+   - loss_score：情景发生后的预期损失分，分数越高代表一旦发生损失越大
+3. 输出置信度 confidence（0~1），给出简短证据依据evidence，evidence必须从输入原文提取，禁止编造内容；
+4. 输出严格为JSON，禁止markdown、前置说明、多余解释文字；
+5. 禁止幻觉：如果提供信息不足，对应分数填null，evidence标注【信息不足，无法评估】；
+6. 不做自由文本扩写，只输出结构化打分结果。
 
-你会收到一棵已经生成好的情景树。请给每个"叶子情景"打分，只给子分数，不要自己算总分。
-
-评分标尺（都用 0-10 或 0-1 的数值）：
-- benefit：收益，0=完全无收益，10=收益极大；
-- risk：风险，0=几乎无风险，10=极高风险；
-- probability：主观发生概率，0 到 1 之间，各情景之间不需要和为 1；
-- cost：代价，0=几乎无代价，10=代价极高；
-- opportunity_cost：机会成本，0=没有错过什么，10=错过极重要的替代方案。
-
-对每个叶子给出：
-- recommendation：一句话建议；
-- reasons：2-4 条打分理由。
-
-最后给出 best_leaf_id 和 overall_advice。
-
-输出一个合法 JSON 对象，不要 Markdown。schema：
+输出模板固定：
 {
-  "evaluations": [
-    {
-      "leaf_id": "A1a",
-      "benefit": 8,
-      "risk": 3,
-      "probability": 0.6,
-      "cost": 4,
-      "opportunity_cost": 5,
-      "recommendation": "一句话建议",
-      "reasons": ["理由1", "理由2"]
-    }
-  ],
-  "best_leaf_id": "A1a",
-  "overall_advice": "整体建议，2-4 句"
+  "risk_score": float,
+  "feasibility_score": float,
+  "loss_score": float,
+  "confidence": float,
+  "evidence": "基于原文的简短依据"
 }
 """
 
@@ -287,72 +275,52 @@ def iter_leaves(node: Dict[str, Any], path: List[str]) -> List[Tuple[List[str], 
     return leaves
 
 
-def _clamp(value: Any, lo: float, hi: float, default: float) -> float:
+def _num_or_none(value: Any, lo: float, hi: float) -> Optional[float]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        v = value.strip()
+        if v.lower() in ('', 'null', 'none', 'n/a', 'na'):
+            return None
     try:
-        v = float(value)
+        f = float(value)
     except (TypeError, ValueError):
-        return default
-    return max(lo, min(hi, v))
+        return None
+    return round(max(lo, min(hi, f)), 4)
 
 
-def _score(evaluation: Dict[str, Any]) -> float:
-    benefit = _clamp(evaluation.get('benefit'), 0, 10, 5)
-    risk = _clamp(evaluation.get('risk'), 0, 10, 5)
-    probability = _clamp(evaluation.get('probability'), 0, 1, 0.5)
-    cost = _clamp(evaluation.get('cost'), 0, 10, 5)
-    opportunity_cost = _clamp(evaluation.get('opportunity_cost'), 0, 10, 5)
-
-    # 0-100 的加权分：收益 25 + 低风险 25 + 概率 20 + 低成本 15 + 低机会成本 15
-    score = (
-        25 * benefit / 10
-        + 25 * (10 - risk) / 10
-        + 20 * probability
-        + 15 * (10 - cost) / 10
-        + 15 * (10 - opportunity_cost) / 10
-    )
-    return round(score, 1)
+def _scorer_default() -> Dict[str, Any]:
+    return {
+        'risk_score': None,
+        'feasibility_score': None,
+        'loss_score': None,
+        'confidence': None,
+        'evidence': '【信息不足，无法评估】',
+    }
 
 
-def normalize_evaluations(
-    evaluations: Dict[str, Any],
-    leaf_ids: List[str],
-) -> Dict[str, Dict[str, Any]]:
-    if not isinstance(evaluations, dict):
-        raise ValueError('评估结果不是 JSON 对象')
-    rows = evaluations.get('evaluations')
-    if not isinstance(rows, list):
-        raise ValueError('评估结果缺少 evaluations 数组')
+def normalize_scorer_result(raw: Any) -> Dict[str, Any]:
+    if not isinstance(raw, dict):
+        return _scorer_default()
+    evidence = raw.get('evidence')
+    if evidence is None or str(evidence).strip() == '':
+        evidence = '【信息不足，无法评估】'
+    return {
+        'risk_score': _num_or_none(raw.get('risk_score'), 0, 10),
+        'feasibility_score': _num_or_none(raw.get('feasibility_score'), 0, 10),
+        'loss_score': _num_or_none(raw.get('loss_score'), 0, 10),
+        'confidence': _num_or_none(raw.get('confidence'), 0, 1),
+        'evidence': str(evidence).strip(),
+    }
 
-    table: Dict[str, Dict[str, Any]] = {}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        leaf_id = str(row.get('leaf_id') or '').strip()
-        if leaf_id not in leaf_ids:
-            continue
-        table[leaf_id] = {
-            'benefit': _clamp(row.get('benefit'), 0, 10, 5),
-            'risk': _clamp(row.get('risk'), 0, 10, 5),
-            'probability': _clamp(row.get('probability'), 0, 1, 0.5),
-            'cost': _clamp(row.get('cost'), 0, 10, 5),
-            'opportunity_cost': _clamp(row.get('opportunity_cost'), 0, 10, 5),
-            'recommendation': str(row.get('recommendation') or '').strip(),
-            'reasons': _as_str_list(row.get('reasons'), 6),
-        }
 
-    # 对缺漏的叶子补默认值，避免渲染空评分
-    for leaf_id in leaf_ids:
-        if leaf_id not in table:
-            table[leaf_id] = {
-                'benefit': 5,
-                'risk': 5,
-                'probability': 0.5,
-                'cost': 5,
-                'opportunity_cost': 5,
-                'recommendation': '',
-                'reasons': [],
-            }
-    return table
+def _total_from_scores(e: Dict[str, Any]) -> float:
+    risk = e.get('risk_score') if e.get('risk_score') is not None else 5.0
+    feas = e.get('feasibility_score') if e.get('feasibility_score') is not None else 5.0
+    loss = e.get('loss_score') if e.get('loss_score') is not None else 5.0
+    # risk 越低越好、feasibility 越高越好、loss 越低越好
+    base = (10 - risk) * 0.4 + feas * 0.35 + (10 - loss) * 0.25
+    return round(base * 10, 1)
 
 
 def _branch_label_for_path(tree: Dict[str, Any], path: List[str]) -> str:
@@ -377,24 +345,20 @@ def _find_node(tree: Dict[str, Any], path: List[str]) -> Optional[Dict[str, Any]
 def compute_scores(tree: Dict[str, Any], evals: Dict[str, Dict[str, Any]]) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     leaves = iter_leaves_with_path(tree)
     ranked: List[Dict[str, Any]] = []
-    leaf_map: Dict[str, Dict[str, Any]] = {}
 
     for path, node in leaves:
         leaf_id = node['id']
-        e = evals[leaf_id]
-        total = _score(e)
+        e = evals.get(leaf_id, _scorer_default())
+        total = _total_from_scores(e)
         node['evaluation'] = {
             'leaf_id': leaf_id,
-            'benefit': e['benefit'],
-            'risk': e['risk'],
-            'probability': e['probability'],
-            'cost': e['cost'],
-            'opportunity_cost': e['opportunity_cost'],
-            'recommendation': e['recommendation'],
-            'reasons': e['reasons'],
+            'risk_score': e.get('risk_score'),
+            'feasibility_score': e.get('feasibility_score'),
+            'loss_score': e.get('loss_score'),
+            'confidence': e.get('confidence'),
+            'evidence': e.get('evidence', ''),
             'total_score': total,
         }
-        leaf_map[leaf_id] = node['evaluation']
         ranked.append({
             'path': path,
             'branch': _branch_label_for_path(tree, path),
@@ -421,11 +385,12 @@ def iter_leaves_with_path(tree: Dict[str, Any]) -> List[Tuple[List[str], Dict[st
 def _propagate_risk(tree: Dict[str, Any]) -> None:
     def walk(node: Dict[str, Any]) -> float:
         if not node['children']:
-            risk = node.get('evaluation', {}).get('risk', 5)
+            risk = node.get('evaluation', {}).get('risk_score')
+            risk = risk if risk is not None else 5.0
             node['_risk'] = risk
             return risk
         child_risks = [walk(c) for c in node['children']]
-        node['_risk'] = max(child_risks) if child_risks else 5
+        node['_risk'] = max(child_risks) if child_risks else 5.0
         return node['_risk']
 
     for root in tree['branches']:
@@ -437,12 +402,70 @@ def _propagate_risk(tree: Dict[str, Any]) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _build_eval_user(tree: Dict[str, Any]) -> str:
-    return (
-        '情景树如下（JSON）：\n\n'
-        + json5.dumps(tree, ensure_ascii=False, indent=2)
-        + '\n\n请给每个叶子情景打分。'
-    )
+def _scorer_config() -> Dict[str, str]:
+    return {
+        'url': os.getenv('VAM_SCORER_URL', '').strip(),
+        'api_key': os.getenv('VAM_SCORER_API_KEY', os.getenv('DASHSCOPE_API_KEY', '')).strip(),
+        'model': os.getenv('VAM_SCORER_MODEL', 'deepseek-v4-pro-high').strip(),
+    }
+
+
+def _harness_score(contract_text: str, scenario_text: str) -> Tuple[Dict[str, Any], str]:
+    cfg = _scorer_config()
+    payload = {
+        'system_prompt': SCORER_SYSTEM,
+        'user': f'合同原文：{contract_text}\n待评估推演情景：{scenario_text}',
+        'model': cfg['model'],
+    }
+    headers = {'Content-Type': 'application/json'}
+    if cfg['api_key']:
+        headers['Authorization'] = f'Bearer {cfg["api_key"]}'
+
+    resp = requests.post(cfg['url'], json=payload, headers=headers, timeout=180)
+    resp.raise_for_status()
+    data = resp.json()
+    content = data.get('content') or data.get('data', {}).get('content') or data.get('text') or ''
+    if isinstance(content, dict):
+        content = json.dumps(content, ensure_ascii=False)
+    return _extract_json(str(content)), str(content)
+
+
+def _local_score(
+    cfg: Dict[str, Any],
+    contract_text: str,
+    scenario_text: str,
+    temperature: float,
+    max_tokens: int,
+) -> Tuple[Dict[str, Any], str]:
+    user = f'合同原文：{contract_text}\n待评估推演情景：{scenario_text}'
+    return _generate_json(cfg, SCORER_SYSTEM, user, temperature=temperature, max_tokens=max_tokens)
+
+
+def _score_leaf(
+    cfg: Dict[str, Any],
+    contract_text: str,
+    scenario_text: str,
+) -> Tuple[Dict[str, Any], str]:
+    scorer = _scorer_config()
+    if scorer['url']:
+        return _harness_score(contract_text, scenario_text)
+    return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
+
+
+def _scenario_text(tree: Dict[str, Any], path: List[str]) -> str:
+    node = _find_node(tree, path)
+    if node is None:
+        return ' -> '.join(path)
+    parts = [f'分支：{node.get("branch", "")}']
+    if node.get('premise'):
+        parts.append(f'前提：{node["premise"]}')
+    events = node.get('events') or []
+    if events:
+        parts.append('连锁事件：' + '；'.join(events))
+    risks = node.get('risks') or []
+    if risks:
+        parts.append('风险提示：' + '；'.join(risks))
+    return '\n'.join(parts)
 
 
 def _evaluate_and_finish(
@@ -453,11 +476,17 @@ def _evaluate_and_finish(
     diverge_text: str,
 ) -> Dict[str, Any]:
     leaves = iter_leaves_with_path(tree)
-    leaf_ids = [path[-1] for path, _ in leaves]
-    eval_raw, eval_text = _generate_json(
-        cfg, EVALUATE_SYSTEM, _build_eval_user(tree), temperature=0.1, max_tokens=2048
-    )
-    evals = normalize_evaluations(eval_raw, leaf_ids)
+    evals: Dict[str, Dict[str, Any]] = {}
+    raw_evals: List[Dict[str, Any]] = []
+    eval_texts: List[str] = []
+
+    for path, node in leaves:
+        scenario_text = _scenario_text(tree, path)
+        raw, text = _score_leaf(cfg, query, scenario_text)
+        evals[node['id']] = normalize_scorer_result(raw)
+        raw_evals.append({'leaf_id': node['id'], 'scenario': scenario_text, 'scores': raw})
+        eval_texts.append(text)
+
     ranked, best = compute_scores(tree, evals)
     return {
         'query': query,
@@ -465,9 +494,9 @@ def _evaluate_and_finish(
         'ranked': ranked,
         'best': best,
         'raw_diverge': raw_diverge,
-        'raw_eval': eval_raw,
+        'raw_eval': raw_evals,
         'diverge_text': diverge_text,
-        'eval_text': eval_text,
+        'eval_text': '\n'.join(eval_texts),
     }
 
 
@@ -525,7 +554,7 @@ def deepen_leaf(
 def run_sandbox(query: str, llm_cfg: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     query = (query or '').strip()
     if not query:
-        raise ValueError('请输入要推演的对赌条款或决策背景')
+        raise ValueError('请输入要推演的合同情景或决策背景')
 
     cfg = llm_cfg or default_llm_cfg()
 

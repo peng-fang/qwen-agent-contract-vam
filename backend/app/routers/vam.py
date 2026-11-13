@@ -1,4 +1,4 @@
-"""对赌协议推演相关路由。"""
+"""合同情景推演与决策评分相关路由。"""
 
 from fastapi import APIRouter
 from starlette.concurrency import run_in_threadpool
