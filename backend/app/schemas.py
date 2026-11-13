@@ -58,3 +58,11 @@ class EvidenceMatch(BaseModel):
 
 class EvidenceSearchResponse(BaseModel):
     matches: List[EvidenceMatch]
+
+
+class ClauseExtractionResponse(BaseModel):
+    documents: List[Dict[str, Any]]
+    clauses: List[Dict[str, Any]]
+    matches: List[Dict[str, Any]]
+    extractor: str
+    warnings: List[str]
