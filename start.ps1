@@ -11,6 +11,7 @@
 
 param(
     [int]$Port = 8001,
+    [string]$Python = '',
     [switch]$NoBrowser,
     [switch]$Rebuild
 )
@@ -32,6 +33,7 @@ Write-Host '== 签之前 · 本地一键启动 ==' -ForegroundColor Cyan
 $PyExe = $null
 $PyPrefix = @()
 $candidates = @(
+    $Python,
     $env:PYTHON,
     (Join-Path $Root '.venv\Scripts\python.exe'),
     (Join-Path $Root '..\.venv312\Scripts\python.exe'),

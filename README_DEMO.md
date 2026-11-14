@@ -64,6 +64,7 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 ```powershell
 .\start.ps1              # 默认 8001，自动打开浏览器
 .\start.ps1 -NoBrowser   # 不打开浏览器
+.\start.ps1 -Python C:\path\to\python.exe   # 指定 Python 解释器
 .\start.bat               # 也可以直接双击
 ```
 

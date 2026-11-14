@@ -1,0 +1,38 @@
+# 主后端 + 条款抽取 + 评测依赖（Python 3.10+）
+# 安装：python -m pip install -r requirements.txt
+# 说明：仓库根目录自带 qwen_agent 源码，无需 pip install -e .；
+#       可选 Intern sidecar 的 torch/transformers 见 intern_service/requirements.txt。
+
+fastapi>=0.103
+uvicorn[standard]>=0.23
+python-multipart
+aiofiles
+sse-starlette
+pdfplumber>=0.10
+pdfminer.six
+python-dotenv
+
+# qwen_agent（Function Calling / RAG / MCP）
+dashscope>=1.11.0
+eval_type_backport
+json5
+jsonlines
+jsonschema
+openai
+pydantic>=2.3
+requests
+tiktoken
+pillow
+soundfile
+mcp>=1.0
+
+# 文件解析（合同页支持 PDF/Word/TXT/MD）
+python-docx
+python-pptx
+pandas
+tabulate
+beautifulsoup4
+rank_bm25
+jieba
+charset-normalizer
+snowballstemmer
