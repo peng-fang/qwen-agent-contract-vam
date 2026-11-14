@@ -1,14 +1,15 @@
-"""双 Agent 合同情景推演与决策评分流水线。
+"""合同情景推演与决策评分流水线。
 
 只依赖 Qwen-Agent 的 LLM 抽象（`get_chat_model`），不引入额外框架。
-两个 Agent 都是同一类 LLM 的不同"角色提示词"，采用"先发散、后收敛"的两段式调用，
-而不是自由多轮 Group Chat——这样能稳定拿到结构化 JSON，也便于控制分支数量。
+"发散推演"与"打分评估"是同一类 LLM 的两个角色提示词，采用"先发散、后收敛"的
+两段式调用，而不是自由多轮 Group Chat——这样能稳定拿到结构化 JSON，也便于控制分支数量。
 
 约定（写死在提示词与 normalize 层）：
 - 树最多 2 层；
 - 第一层最多 3 个主分支，第二层每个节点最多 2 个子分支；
 - 只评估叶子情景，叶子数量被天然限制在 6 个左右；
-- 评估 Agent 只给子分数，总分由 Python 按固定权重计算，避免模型"随口排第一"。
+- 评估只给子分数，总分由 Python 按固定权重计算，避免模型"随口排第一"；
+- 三个子分数任一缺失时不计算总分（返回 null），不用默认值补齐。
 """
 
 import copy
@@ -337,10 +338,13 @@ def normalize_scorer_result(raw: Any) -> Dict[str, Any]:
     }
 
 
-def _total_from_scores(e: Dict[str, Any]) -> float:
-    risk = e.get('risk_score') if e.get('risk_score') is not None else 5.0
-    feas = e.get('feasibility_score') if e.get('feasibility_score') is not None else 5.0
-    loss = e.get('loss_score') if e.get('loss_score') is not None else 5.0
+def _total_from_scores(e: Dict[str, Any]) -> Optional[float]:
+    risk = e.get('risk_score')
+    feas = e.get('feasibility_score')
+    loss = e.get('loss_score')
+    # 文档口径：任一子分数为 null 就不计算总分，避免用默认值伪造排名
+    if risk is None or feas is None or loss is None:
+        return None
     # risk 越低越好、feasibility 越高越好、loss 越低越好
     base = (10 - risk) * 0.4 + feas * 0.35 + (10 - loss) * 0.25
     return round(base * 10, 1)
@@ -389,12 +393,19 @@ def compute_scores(tree: Dict[str, Any], evals: Dict[str, Dict[str, Any]]) -> Tu
             **node['evaluation'],
         })
 
-    ranked.sort(key=lambda r: r['total_score'], reverse=True)
+    ranked.sort(
+        key=lambda r: (
+            r['total_score'] is not None,
+            r['total_score'] if r['total_score'] is not None else -1,
+        ),
+        reverse=True,
+    )
 
     # 把子节点风险向上传播，用于父节点着色
     _propagate_risk(tree)
 
-    best = ranked[0] if ranked else {}
+    # 只把有总分的叶子作为推荐；全部信息不足时不伪造推荐
+    best = next((r for r in ranked if r['total_score'] is not None), ranked[0] if ranked else {})
     return ranked, best
 
 
@@ -406,14 +417,13 @@ def iter_leaves_with_path(tree: Dict[str, Any]) -> List[Tuple[List[str], Dict[st
 
 
 def _propagate_risk(tree: Dict[str, Any]) -> None:
-    def walk(node: Dict[str, Any]) -> float:
+    def walk(node: Dict[str, Any]) -> Optional[float]:
         if not node['children']:
             risk = node.get('evaluation', {}).get('risk_score')
-            risk = risk if risk is not None else 5.0
             node['_risk'] = risk
             return risk
-        child_risks = [walk(c) for c in node['children']]
-        node['_risk'] = max(child_risks) if child_risks else 5.0
+        child_risks = [risk for risk in (walk(c) for c in node['children']) if risk is not None]
+        node['_risk'] = max(child_risks) if child_risks else None
         return node['_risk']
 
     for root in tree['branches']:
@@ -511,14 +521,47 @@ def _score_leaf(
     cfg: Dict[str, Any],
     contract_text: str,
     scenario_text: str,
-) -> Tuple[Dict[str, Any], str]:
+) -> Tuple[Dict[str, Any], str, Optional[str]]:
+    """返回 (原始分数, 原始输出, 回退说明)。回退说明为 None 表示主路径成功。"""
     provider = os.getenv('VAM_SCORER_PROVIDER', 'auto').strip().lower()
     scorer = _scorer_config()
+
     if provider == 'intern':
-        return _intern_score(contract_text, scenario_text)
+        try:
+            raw, text = _intern_score(contract_text, scenario_text)
+            return raw, text, None
+        except Exception as exc:  # noqa: BLE001
+            note = f'Intern sidecar 不可用（{exc}），已自动回退'
+            if scorer['url']:
+                try:
+                    raw, text = _harness_score(contract_text, scenario_text)
+                    return raw, text, note + '到外部评分 API'
+                except Exception as exc2:  # noqa: BLE001
+                    note += f'；外部评分 API 也不可用（{exc2}）'
+            try:
+                raw, text = _local_score(
+                    cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256,
+                )
+                return raw, text, note + '到本地模型'
+            except Exception as exc3:  # noqa: BLE001
+                raise RuntimeError(f'{note}；本地模型评分也失败：{exc3}') from exc3
+
     if provider == 'harness' or (provider == 'auto' and scorer['url']):
-        return _harness_score(contract_text, scenario_text)
-    return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
+        try:
+            raw, text = _harness_score(contract_text, scenario_text)
+            return raw, text, None
+        except Exception as exc:  # noqa: BLE001
+            note = f'外部评分 API 不可用（{exc}），已自动回退到本地模型'
+            try:
+                raw, text = _local_score(
+                    cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256,
+                )
+                return raw, text, note
+            except Exception as exc2:  # noqa: BLE001
+                raise RuntimeError(f'{note}；本地模型评分也失败：{exc2}') from exc2
+
+    raw, text = _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
+    return raw, text, None
 
 
 def _scenario_text(tree: Dict[str, Any], path: List[str]) -> str:
@@ -548,10 +591,13 @@ def _evaluate_and_finish(
     evals: Dict[str, Dict[str, Any]] = {}
     raw_evals: List[Dict[str, Any]] = []
     eval_texts: List[str] = []
+    fallbacks: List[Dict[str, str]] = []
 
     for path, node in leaves:
         scenario_text = _scenario_text(tree, path)
-        raw, text = _score_leaf(cfg, query, scenario_text)
+        raw, text, fallback = _score_leaf(cfg, query, scenario_text)
+        if fallback:
+            fallbacks.append({'leaf_id': node['id'], 'note': fallback})
         evals[node['id']] = normalize_scorer_result(raw)
         raw_evals.append({'leaf_id': node['id'], 'scenario': scenario_text, 'scores': raw})
         eval_texts.append(text)
@@ -566,6 +612,11 @@ def _evaluate_and_finish(
         'raw_eval': raw_evals,
         'diverge_text': diverge_text,
         'eval_text': '\n'.join(eval_texts),
+        'scoring': {
+            'provider': os.getenv('VAM_SCORER_PROVIDER', 'auto').strip().lower(),
+            'scored_leaves': len(leaves),
+            'fallbacks': fallbacks,
+        },
     }
 
 

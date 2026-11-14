@@ -42,7 +42,9 @@ ul.vam-tree { border-left:none; padding-left:0; }
 """
 
 
-def _risk_class(risk: float) -> str:
+def _risk_class(risk: float | None) -> str:
+    if risk is None:
+        return ''
     if risk >= 7:
         return 'risk-high'
     if risk >= 4:
@@ -50,7 +52,9 @@ def _risk_class(risk: float) -> str:
     return 'risk-low'
 
 
-def _badge(risk: float) -> str:
+def _badge(risk: float | None) -> str:
+    if risk is None:
+        return '<span class="badge" style="background:#9ca3af;">信息不足</span>'
     if risk >= 7:
         return '<span class="badge" style="background:#e53935;">高风险</span>'
     if risk >= 4:
@@ -75,7 +79,7 @@ def _meta_list(title: str, items: List[str]) -> str:
 
 
 def _render_node(node: Dict[str, Any], depth: int) -> str:
-    risk = float(node.get('_risk', 5))
+    risk = node.get('_risk')
     cls = _risk_class(risk)
     label = html.escape(node['branch'])
 
@@ -95,10 +99,11 @@ def _render_node(node: Dict[str, Any], depth: int) -> str:
 
     # 叶子节点
     ev = node.get('evaluation', {})
-    score = ev.get('total_score', 0)
+    score = ev.get('total_score')
+    score_text = '信息不足' if score is None else f'{_fmt(score)}分'
     summary = (
         f'{label} {_badge(risk)}'
-        f'<span class="score">{_fmt(score)}分</span>'
+        f'<span class="score">{score_text}</span>'
     )
     inner = ''
     if node.get('premise'):
@@ -133,18 +138,19 @@ def _best_block(best: Dict[str, Any]) -> str:
     if not best:
         return ''
     path = ' → '.join(html.escape(p) for p in best.get('path', []))
+    total = best.get('total_score')
+    total_text = '信息不足' if total is None else f'{_fmt(total)} / 100'
     return (
         '<div class="vam-best">'
         f'<b>推荐路径：</b>{path}<br>'
         f'<b>分支：</b>{html.escape(best.get("branch", ""))}<br>'
-        f'<b>总分：</b>{_fmt(best.get("total_score", 0))} / 100'
+        f'<b>总分：</b>{total_text}'
         '</div>'
     )
 
 
 def _render_node_markdown(node: Dict[str, Any], depth: int, lines: List[str]) -> None:
     prefix = '#' * min(depth + 3, 6)
-    risk = float(node.get('_risk', 5))
     lines.append(f'{prefix} {"　" * (depth)} {node["branch"]}')
     if node.get('premise'):
         lines.append(f'- 前提：{node["premise"]}')
@@ -158,7 +164,7 @@ def _render_node_markdown(node: Dict[str, Any], depth: int, lines: List[str]) ->
         def _md(v: Any) -> str:
             return '信息不足' if v is None else str(v)
         lines.append(
-            f'- 评分：总分 {ev.get("total_score", 0)}；'
+            f'- 评分：总分 {_md(ev.get("total_score"))}；'
             f'违约风险 {_md(ev.get("risk_score"))} / 10；'
             f'落地可行性 {_md(ev.get("feasibility_score"))} / 10；'
             f'预期损失 {_md(ev.get("loss_score"))} / 10；'
@@ -195,8 +201,10 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
 
     if best:
         path = ' → '.join(best.get('path', []))
+        total = best.get('total_score')
+        total_text = '信息不足' if total is None else f'{total} / 100'
         lines.append('## 推荐路径')
-        lines.append(f'- **{path}**（{best.get("branch", "")}），总分 {best.get("total_score", 0)} / 100')
+        lines.append(f'- **{path}**（{best.get("branch", "")}），总分 {total_text}')
         lines.append('')
 
     if ranked:
@@ -208,7 +216,7 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
             def _cell(v: Any) -> str:
                 return '信息不足' if v is None else str(v)
             lines.append(
-                f'| {i} | {r.get("branch", "")} | {r.get("total_score", 0)} '
+                f'| {i} | {r.get("branch", "")} | {_cell(r.get("total_score"))} '
                 f'| {_cell(r.get("risk_score"))} | {_cell(r.get("feasibility_score"))} '
                 f'| {_cell(r.get("loss_score"))} | {_cell(r.get("confidence"))} |'
             )

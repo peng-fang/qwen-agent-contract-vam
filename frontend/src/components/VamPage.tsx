@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import axios from 'axios'
 import {
   Background,
   Controls,
@@ -27,6 +28,14 @@ function riskColor(risk: number): string {
   if (risk >= 7) return '#fee2e2'
   if (risk >= 4) return '#fef3c7'
   return '#dcfce7'
+}
+
+function errorText(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const detail = (error.response?.data as { detail?: string } | undefined)?.detail
+    if (detail) return detail
+  }
+  return error instanceof Error ? error.message : '请求失败'
 }
 
 function buildGraph(tree: VamResult['tree']) {
@@ -58,7 +67,7 @@ function buildGraph(tree: VamResult['tree']) {
   function place(node: VamTreeNode, depth: number, left: number, parentId?: string) {
     const width = subtreeWidth(node)
     const id = uniqueId(node)
-    const risk = node.evaluation?.risk_score ?? node._risk ?? 5
+    const risk = node.evaluation?.risk_score ?? node._risk ?? null
     nodes.push({
       id,
       position: { x: left + width / 2 - 100, y: depth * V_GAP },
@@ -68,7 +77,7 @@ function buildGraph(tree: VamResult['tree']) {
         score: node.evaluation?.total_score ?? null,
       },
       style: {
-        background: riskColor(risk),
+        background: risk === null ? '#f1f5f9' : riskColor(risk),
         border: '1px solid #e5e7eb',
         borderRadius: 8,
         padding: '10px 12px',
@@ -149,7 +158,7 @@ export function VamPage() {
       setHistory([])
       setSelectedLeaf(res.ranked[0]?.leaf_id ?? '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '推演失败')
+      setError(errorText(e))
     } finally {
       setLoading(false)
     }
@@ -165,7 +174,7 @@ export function VamPage() {
       setResult(res)
       setSelectedLeaf(res.ranked[0]?.leaf_id ?? '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '展开失败')
+      setError(errorText(e))
     } finally {
       setLoading(false)
     }
@@ -189,7 +198,7 @@ export function VamPage() {
       const md = await exportVam(result)
       setReport(md)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '导出失败')
+      setError(errorText(e))
     }
   }
 
@@ -198,8 +207,9 @@ export function VamPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">合同情景推演与决策评分</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          输入对赌条款或关键决策背景，系统用两个 Agent 先生成情景分支、再打分排序，最后渲染成可展开的决策树。
-          结果只是情景推演，不是真实预测，也不构成投资或法律建议。
+          输入对赌条款或关键决策背景，系统用同一模型的两个角色提示先生成情景分支、再逐个打分，
+          总分由 Python 按固定权重计算；任一子分数缺失时不计算总分。结果只是情景推演，
+          不是真实预测，也不构成投资或法律建议。
         </p>
       </div>
 
@@ -274,7 +284,9 @@ export function VamPage() {
                   <div>
                     <span className="font-medium">推荐路径：</span>
                     {result.best.path?.join(' → ')}（{result.best.branch}） — 总分{' '}
-                    {result.best.total_score} / 100
+                    {result.best.total_score === null
+                      ? '信息不足'
+                      : `${result.best.total_score} / 100`}
                   </div>
                   <table className="w-full border-collapse text-xs">
                     <thead>
@@ -294,7 +306,9 @@ export function VamPage() {
                         <tr key={r.leaf_id}>
                           <td className="border border-border px-2 py-1">{i + 1}</td>
                           <td className="border border-border px-2 py-1">{r.branch}</td>
-                          <td className="border border-border px-2 py-1">{r.total_score}</td>
+                          <td className="border border-border px-2 py-1">
+                            {r.total_score === null ? '信息不足' : r.total_score}
+                          </td>
                           <td className="border border-border px-2 py-1">
                             <Badge
                               variant={
@@ -343,6 +357,14 @@ export function VamPage() {
                 </div>
               )}
             </div>
+
+            {result && result.scoring?.fallbacks?.length ? (
+              <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                评分回退：{result.scoring.fallbacks[0].note}
+                {result.scoring.fallbacks.length > 1 &&
+                  `（共 ${result.scoring.fallbacks.length} 个叶子发生回退）`}
+              </div>
+            ) : null}
 
             <details className="mt-4 rounded-md border border-border">
               <summary className="cursor-pointer px-3 py-2 text-sm text-muted-foreground">

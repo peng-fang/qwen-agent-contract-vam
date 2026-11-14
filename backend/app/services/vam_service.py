@@ -1,4 +1,4 @@
-"""合同情景推演与决策评分服务：复用 vam_sandbox 的双 Agent 流水线。"""
+"""合同情景推演与决策评分服务：复用 vam_sandbox 的两段式（发散 + 打分）流水线。"""
 
 import sys
 from pathlib import Path
@@ -22,6 +22,7 @@ def _public(result: Dict[str, Any]) -> Dict[str, Any]:
         'tree': tree,
         'ranked': result.get('ranked', []),
         'best': result.get('best', {}),
+        'scoring': result.get('scoring', {}),
     }
 
 

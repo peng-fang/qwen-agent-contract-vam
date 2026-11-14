@@ -36,6 +36,7 @@ class VamResult(BaseModel):
     tree: Dict[str, Any]
     ranked: List[Dict[str, Any]]
     best: Dict[str, Any]
+    scoring: Dict[str, Any] = {}
 
 
 class VamExportResponse(BaseModel):
@@ -66,3 +67,31 @@ class ClauseExtractionResponse(BaseModel):
     matches: List[Dict[str, Any]]
     extractor: str
     warnings: List[str]
+    evidence_review: Dict[str, Any]
+    risk: Dict[str, Any]
+
+
+class EvidenceResolveResponse(BaseModel):
+    evidence_id: str
+    document_id: str
+    filename: str
+    role: str
+    page: int
+    char_start: int
+    char_end: int
+    quote: str
+    context: str
+    verified: bool
+
+
+class VersionDiffDocument(BaseModel):
+    document_id: str
+    filename: str
+
+
+class VersionCompareResponse(BaseModel):
+    old_document: VersionDiffDocument
+    new_document: VersionDiffDocument
+    summary: Dict[str, int]
+    rows: List[Dict[str, Any]]
+    method: str

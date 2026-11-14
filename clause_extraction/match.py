@@ -66,6 +66,11 @@ def _merge_fields(clauses: List[Clause]) -> Dict[str, Any]:
     }
 
 
+def merge_fields(clauses: List[Clause]) -> Dict[str, Any]:
+    """把同类条款的字段合并成可比较的一侧（供匹配与版本对比复用）。"""
+    return _merge_fields(clauses)
+
+
 def _side_payload(clauses: List[Clause]) -> Optional[Dict[str, Any]]:
     if not clauses:
         return None
@@ -241,6 +246,10 @@ def _match_extra_fee(
             f"额外收费不一致：宣传 {_format_per_unit(promo_fields['per_unit_amounts'])}，"
             f"合同 {_format_per_unit(contract_fees)}"
         ], {'promo_fees': promo_fields['per_unit_amounts'], 'contract_fees': contract_fees}
+    if promo_fields['per_unit_amounts'] and promo_fields['per_unit_amounts'] == contract_fees:
+        return Verdict.CONSISTENT, ['双方列出的额外收费项目与单价一致'], {
+            'fees': contract_fees,
+        }
     if promo_free and not contract_fees:
         return Verdict.CONSISTENT, ['宣传与合同均未列出额外收费'], {}
     if contract_fees:
