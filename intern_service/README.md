@@ -56,8 +56,10 @@ cd D:\港大NLP\project_deepseek\Qwen-Agent\backend
 
 主后端会按分支逐个调用 sidecar，返回新的 5 字段评分。
 
+签约前必问清单通过 `POST /priority` 使用同一模型，为每条问题选择签前必须确认、建议确认、留作记录或暂未定级。更新此接口后需要重启 sidecar。
+
 ## 说明
 
 - Intern-Decision 是**结构化打分模型**，不是聊天模型；它不生成长篇解释。
-- 因此 `evidence` 使用输入情景片段，并标注“输入依据”，不是模型自由生成的原文引用。
+- `evidence` 返回评分说明。实际合同引用由主后端按所选 PDF 原文和页码复核，并独立展示。
 - 模型权重与 `intern_service/models/` 已在 `.gitignore` 中，不会提交。

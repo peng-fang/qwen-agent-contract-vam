@@ -1,15 +1,14 @@
-"""把推演结果渲染成一张自包含的可交互 HTML 决策树。
-
-不依赖 React/ECharts，只用原生 <details>/<ul> 和少量 CSS，方便直接放进 Gradio 的 gr.HTML。
-每个叶子节点显示总分、风险等级、收益/风险/概率/代价/机会成本，可展开看连锁事件、风险和理由。
-"""
+"""Render contract scenario results as Markdown or a standalone HTML tree."""
 
 import html
+import re
 from typing import Any, Dict, List
+
+from .comparison import ENUM_LABELS, OBJECTIVES, PARAMETERS, ROLES, TEMPLATES, TRIGGERS
 
 _LEGEND = """
 <div style="display:flex;gap:14px;flex-wrap:wrap;margin:8px 0 14px 0;font-size:13px;">
-  <span><span style="display:inline-block;width:12px;height:12px;background:#e8f5e9;border:1px solid #43a047;border-radius:3px;"></span> 低风险（≤3）</span>
+  <span><span style="display:inline-block;width:12px;height:12px;background:#e8f5e9;border:1px solid #43a047;border-radius:3px;"></span> 不利因素较低（&lt;4）</span>
   <span><span style="display:inline-block;width:12px;height:12px;background:#fff8e1;border:1px solid #f9a825;border-radius:3px;"></span> 中风险（4-6）</span>
   <span><span style="display:inline-block;width:12px;height:12px;background:#ffebee;border:1px solid #e53935;border-radius:3px;"></span> 高风险（≥7）</span>
 </div>
@@ -20,7 +19,6 @@ _CSS = """
 .vam-wrap { font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif; color:#1f2937; line-height:1.55; }
 .vam-title { font-size:20px; font-weight:700; margin:6px 0 4px; }
 .vam-sub { color:#6b7280; font-size:13px; margin-bottom:10px; }
-.vam-best { border:1px solid #c8e6c9; background:#f1f8e9; border-radius:8px; padding:10px 12px; margin:10px 0 14px; }
 .vam-list { margin:4px 0 10px; padding-left:18px; }
 .vam-list li { margin:2px 0; font-size:13px; }
 ul.vam-tree, ul.vam-tree ul { list-style:none; margin:6px 0 0 0; padding-left:20px; border-left:2px solid #e5e7eb; }
@@ -42,7 +40,9 @@ ul.vam-tree { border-left:none; padding-left:0; }
 """
 
 
-def _risk_class(risk: float) -> str:
+def _risk_class(risk: float | None) -> str:
+    if risk is None:
+        return ''
     if risk >= 7:
         return 'risk-high'
     if risk >= 4:
@@ -50,7 +50,9 @@ def _risk_class(risk: float) -> str:
     return 'risk-low'
 
 
-def _badge(risk: float) -> str:
+def _badge(risk: float | None) -> str:
+    if risk is None:
+        return '<span class="badge" style="background:#475569;">未评分</span>'
     if risk >= 7:
         return '<span class="badge" style="background:#e53935;">高风险</span>'
     if risk >= 4:
@@ -59,6 +61,8 @@ def _badge(risk: float) -> str:
 
 
 def _fmt(value: Any, digits: int = 1) -> str:
+    if value is None:
+        return '待确认'
     if isinstance(value, float):
         return f'{value:.{digits}f}'
     return str(value)
@@ -75,7 +79,7 @@ def _meta_list(title: str, items: List[str]) -> str:
 
 
 def _render_node(node: Dict[str, Any], depth: int) -> str:
-    risk = float(node.get('_risk', 5))
+    risk = node.get('_risk')
     cls = _risk_class(risk)
     label = html.escape(node['branch'])
 
@@ -95,10 +99,10 @@ def _render_node(node: Dict[str, Any], depth: int) -> str:
 
     # 叶子节点
     ev = node.get('evaluation', {})
-    score = ev.get('total_score', 0)
+    score = ev.get('total_score')
     summary = (
         f'{label} {_badge(risk)}'
-        f'<span class="score">{_fmt(score)}分</span>'
+        + (f'<span class="score">实验评分 {_fmt(score)}</span>' if score is not None else '')
     )
     inner = ''
     if node.get('premise'):
@@ -108,17 +112,17 @@ def _render_node(node: Dict[str, Any], depth: int) -> str:
     inner += _meta_list('风险', node.get('risks', []))
     inner += _meta_list('关键变量', node.get('key_variables', []))
     if ev.get('evidence'):
-        inner += _meta_list('证据依据', [ev['evidence']])
+        inner += _meta_list('模型评分说明', [ev['evidence']])
 
     def _fmt_score(v: Any) -> str:
         return '信息不足' if v is None else _fmt(v)
 
     metrics = (
         f'<div class="vam-meta"><span class="label">评分：</span>'
-        f'违约风险 {_fmt_score(ev.get("risk_score"))} / 10；'
-        f'落地可行性 {_fmt_score(ev.get("feasibility_score"))} / 10；'
-        f'预期损失 {_fmt_score(ev.get("loss_score"))} / 10；'
-        f'置信度 {_fmt_score(ev.get("confidence"))}'
+        f'不利程度 {_fmt_score(ev.get("risk_score"))} / 10；'
+        f'应对条件 {_fmt_score(ev.get("feasibility_score"))} / 10；'
+        f'条件负担 {_fmt_score(ev.get("loss_score"))} / 10；'
+        f'模型自评 {_fmt_score(ev.get("confidence"))}'
         f'</div>'
     )
     inner = metrics + inner
@@ -129,92 +133,128 @@ def _render_node(node: Dict[str, Any], depth: int) -> str:
     )
 
 
-def _best_block(best: Dict[str, Any]) -> str:
-    if not best:
-        return ''
-    path = ' → '.join(html.escape(p) for p in best.get('path', []))
-    return (
-        '<div class="vam-best">'
-        f'<b>推荐路径：</b>{path}<br>'
-        f'<b>分支：</b>{html.escape(best.get("branch", ""))}<br>'
-        f'<b>总分：</b>{_fmt(best.get("total_score", 0))} / 100'
-        '</div>'
-    )
+def _md(value: Any) -> str:
+    text = _fmt(value, 2).replace('\r', '').replace('\n', ' ')
+    return re.sub(r'([\\`*_{}\[\]()#+\-.!|>~])', r'\\\1', html.escape(text, quote=False).replace('&gt;', '>'))
 
 
 def _render_node_markdown(node: Dict[str, Any], depth: int, lines: List[str]) -> None:
     prefix = '#' * min(depth + 3, 6)
-    risk = float(node.get('_risk', 5))
-    lines.append(f'{prefix} {"　" * (depth)} {node["branch"]}')
+    lines.append(f'{prefix} {node["id"]} {_md(node["branch"])}')
     if node.get('premise'):
-        lines.append(f'- 前提：{node["premise"]}')
+        lines.append(f'- 前提：{_md(node["premise"])}')
+    trigger = node.get('trigger', 'unknown')
+    lines.append(f'- 假设：{TRIGGERS.get(trigger, "待确认")}')
+    if node.get('trigger_override'):
+        lines.append(f'- 用户设定的计算状态：{TRIGGERS[node["trigger_override"]]}')
+    if node.get('evidence_ids'):
+        lines.append(f'- 关联原文：{", ".join(node["evidence_ids"])}')
     for key, title in [('events', '连锁事件'), ('upsides', '收益'), ('risks', '风险'), ('key_variables', '关键变量')]:
         items = node.get(key, [])
         if items:
             lines.append(f'- {title}：')
-            lines.extend(f'  - {i}' for i in items)
+            lines.extend(f'  - {_md(i)}' for i in items)
     ev = node.get('evaluation')
-    if ev:
-        def _md(v: Any) -> str:
-            return '信息不足' if v is None else str(v)
+    if ev and ev.get('status') != 'disabled':
+        status = {'valid': '可用', 'missing': '信息不足', 'invalid': '模型返回非法分值', 'error': '评分调用失败'}
         lines.append(
-            f'- 评分：总分 {ev.get("total_score", 0)}；'
-            f'违约风险 {_md(ev.get("risk_score"))} / 10；'
-            f'落地可行性 {_md(ev.get("feasibility_score"))} / 10；'
-            f'预期损失 {_md(ev.get("loss_score"))} / 10；'
-            f'置信度 {_md(ev.get("confidence"))}'
+            f'- 实验评分（{status.get(ev.get("status"), "待确认")}）：综合分 {_fmt(ev.get("total_score"))}；'
+            f'不利程度 {_fmt(ev.get("risk_score"))} / 10；'
+            f'应对条件 {_fmt(ev.get("feasibility_score"))} / 10；'
+            f'条件负担 {_fmt(ev.get("loss_score"))} / 10；'
+            f'模型自评 {_fmt(ev.get("confidence"), 2)}'
         )
+        if ev.get('scorer_model'):
+            lines.append(f'- 评分模型：{_md(ev["scorer_model"])}')
         if ev.get('evidence'):
-            lines.append(f'- 证据依据：{ev["evidence"]}')
+            lines.append(f'- 模型评分说明：{_md(ev["evidence"])}')
     for child in node.get('children', []):
         _render_node_markdown(child, depth + 1, lines)
 
 
 def render_markdown_report(result: Dict[str, Any]) -> str:
     tree = result.get('tree', {})
-    ranked = result.get('ranked', [])
-    best = result.get('best', {})
+    study = result.get('study', {})
+    actions = {action['id']: action for action in study.get('actions', [])}
+    comparison = result.get('comparison', {})
 
     lines: List[str] = [
-        '# 合同情景推演与决策评分报告',
+        '# 合同情景分析与方案比较报告',
         '',
-        f'## 场景\n\n{tree.get("scenario", "")}',
+        f'## 场景\n\n{_md(tree.get("scenario", ""))}',
         '',
         '> 本报告为有限情景推演，不构成投资或法律建议。',
         '',
+        f'- 记录：{result.get("run_id", "—")}',
+        f'- 用户身份：{ROLES.get(study.get("role"), "未指定")}',
+        f'- 关注目标：{OBJECTIVES.get(study.get("objective"), "未指定")}',
+        f'- 分析方式：{TEMPLATES.get(study.get("template"), "条款与责任")}',
+        f'- 用户背景：{_md(result.get("query", ""))}',
+        '',
     ]
 
-    if tree.get('assumptions'):
-        lines.append('## 假设')
-        lines.extend(f'- {a}' for a in tree['assumptions'])
-        lines.append('')
-    if tree.get('uncertainties'):
-        lines.append('## 不确定因素')
-        lines.extend(f'- {u}' for u in tree['uncertainties'])
-        lines.append('')
+    lines.extend(['## 所选合同原文', ''])
+    for item in study.get('evidence', []):
+        lines.append(f'- **{item["id"]}** {_md(item["filename"])} · 第 {item["page"]} 页：{_md(item["quote"])}')
+    if not study.get('evidence'):
+        lines.append('未关联 PDF 原文。')
+    if tree.get('trigger_excerpt'):
+        excerpt = tree['trigger_excerpt']
+        lines.append(f'- 供核对的条件片段（{excerpt["evidence_id"] or "用户背景"}）：{_md(excerpt["quote"])}')
+    for key, heading in [('assumptions', '情景假设'), ('uncertainties', '待确认项'), ('warnings', '情景覆盖说明')]:
+        if tree.get(key):
+            lines.extend(['', f'## {heading}', ''])
+            lines.extend(f'- {_md(item)}' for item in tree[key])
 
-    if best:
-        path = ' → '.join(best.get('path', []))
-        lines.append('## 推荐路径')
-        lines.append(f'- **{path}**（{best.get("branch", "")}），总分 {best.get("total_score", 0)} / 100')
-        lines.append('')
+    if actions:
+        if comparison.get('direction') == 'receive':
+            lines.append('\n> 金额按合同约定的应收口径展示，实际收款仍取决于履行情况。\n')
+        lines.extend(['', '## 比较方案与用户设定的参数', ''])
+        for aid, action in actions.items():
+            lines.append(f'### {aid} {_md(action["label"])}')
+            if action['terms']:
+                lines.append(f'- 假设条款：{_md(action["terms"])}')
+            params = action.get('parameters', {})
+            for key, label in PARAMETERS.get(study.get('template'), {}).items():
+                value = params.get(key)
+                if value not in (None, ''):
+                    lines.append(f'- {label}：{_md(ENUM_LABELS.get(str(value), value))}')
+            if params.get('early_exit_applies') is True:
+                lines.append('- 用户已确认退租时间及通知/豁免条件适用。')
+            peak = comparison.get('max_amounts', {}).get(aid)
+            if peak is not None:
+                lines.append(f'- 已列情景中的该项最高金额：{peak:,.2f} 元。')
+        lines.extend(['', '## 同一情景下的方案后果', ''])
+        for scenario in comparison.get('scenarios', []):
+            lines.extend([
+                f'### {scenario["leaf_id"]} {_md(scenario["branch"])}',
+                f'- 计算前提：{TRIGGERS[scenario["trigger"]]}',
+                f'- 比较：{_md(scenario["reason"])}',
+            ])
+            if scenario['preferred_action_ids']:
+                names = '、'.join(actions[key]['label'] for key in scenario['preferred_action_ids'])
+                lines.append(f'- 符合当前目标的方案：{_md(names)}')
+            for cell in scenario['cells']:
+                lines.append(f'- **{_md(actions[cell["action_id"]]["label"])}**')
+                if cell['amount'] is not None:
+                    lines.append(f'  - 条件金额：{cell["amount"]:,.2f} 元。计算式：{_md(cell["formula"])}')
+                if cell['cap'] is not None:
+                    lines.append(f'  - 责任上限：{cell["cap"]:,.2f} 元')
+                if cell['payment_days'] is not None:
+                    lines.append(f'  - 触发后付款期限：{cell["payment_days"]} 天')
+                if cell['missing'] and study.get('template') != 'qualitative':
+                    lines.append(f'  - 待确认：{_md("、".join(cell["missing"]))}')
+                if cell.get('effect'):
+                    lines.append(f'  - 模型推演：{_md(cell["effect"])}')
+    if study.get('experimental_scoring'):
+        weights = study['weights']
+        lines.extend(['', '## 实验评分量表', '',
+                      f'- 权重：不利程度 {weights["risk_score"]}%、应对条件 {weights["feasibility_score"]}%、'
+                      f'条件负担 {weights["loss_score"]}%。',
+                      '- 三项量表均为 0 至 10。综合分用于观察情景特征，方案比较依据上面的条件后果。',
+                      '- 不利程度和条件负担取反后加权。模型自评未经概率校准。'])
 
-    if ranked:
-        lines.append('## 分支评分排序')
-        lines.append('')
-        lines.append('| 排序 | 分支 | 总分 | 违约风险 | 可行性 | 预期损失 | 置信度 |')
-        lines.append('| --- | --- | ---: | ---: | ---: | ---: | ---: |')
-        for i, r in enumerate(ranked, 1):
-            def _cell(v: Any) -> str:
-                return '信息不足' if v is None else str(v)
-            lines.append(
-                f'| {i} | {r.get("branch", "")} | {r.get("total_score", 0)} '
-                f'| {_cell(r.get("risk_score"))} | {_cell(r.get("feasibility_score"))} '
-                f'| {_cell(r.get("loss_score"))} | {_cell(r.get("confidence"))} |'
-            )
-        lines.append('')
-
-    lines.append('## 情景树详情')
+    lines.extend(['', '## 情景树详情'])
     lines.append('')
     for node in tree.get('branches', []):
         _render_node_markdown(node, 0, lines)
@@ -240,7 +280,6 @@ def render_sandbox_html(result: Dict[str, Any]) -> str:
         + '<div class="vam-wrap">'
         + f'<div class="vam-title">{scenario}</div>'
         + '<div class="vam-sub">对赌协议 / 关键决策 · 有限情景推演（非真实预测，仅供参考）</div>'
-        + _best_block(result.get('best', {}))
         + _LEGEND
         + ass
         + unc

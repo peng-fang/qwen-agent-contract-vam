@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { analyzeContract, searchEvidence, type EvidenceMatch } from '@/lib/api'
+import { analyzeContract, searchEvidence, type EvidenceMatch, type VamEvidenceInput } from '@/lib/api'
 import { BrandLogo } from './BrandLogo'
 import { PdfViewer } from './PdfViewer'
 
@@ -22,10 +22,10 @@ const SUGGESTIONS = [
 ]
 
 interface ContractPageProps {
-  onOpenVam: () => void
+  onOpenChecklist: (evidence?: VamEvidenceInput) => void
 }
 
-export function ContractPage({ onOpenVam }: ContractPageProps) {
+export function ContractPage({ onOpenChecklist }: ContractPageProps) {
   const [files, setFiles] = useState<File[]>([])
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
@@ -105,9 +105,9 @@ export function ContractPage({ onOpenVam }: ContractPageProps) {
           </div>
           <Button
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 sm:w-auto"
-            onClick={onOpenVam}
+            onClick={() => onOpenChecklist()}
           >
-            🚀 打开合同情景推演与决策评分 →
+            打开签约前必问清单
           </Button>
         </CardContent>
       </Card>
@@ -196,7 +196,10 @@ export function ContractPage({ onOpenVam }: ContractPageProps) {
               <select
                 className="rounded-md border border-border bg-background px-2 py-1 text-sm"
                 value={selectedIndex}
-                onChange={(e) => setSelectedIndex(Number(e.target.value))}
+                onChange={(e) => {
+                  setSelectedIndex(Number(e.target.value))
+                  setMatches([])
+                }}
               >
                 {fileOptions.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -210,7 +213,8 @@ export function ContractPage({ onOpenVam }: ContractPageProps) {
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
               />
-              <Button variant="secondary" onClick={locate}>
+              <Button variant="secondary" onClick={locate}
+                disabled={loading || !resultFiles[selectedIndex] || !searchText.trim()}>
                 定位并高亮
               </Button>
             </div>
@@ -224,6 +228,23 @@ export function ContractPage({ onOpenVam }: ContractPageProps) {
                 '完成核验后，输入关键词可在 PDF 中定位原文。'
               )}
             </div>
+            {matches.length > 0 && resultFiles[selectedIndex] && (
+              <ul className="max-h-56 space-y-2 overflow-auto rounded-lg border p-3">
+                {matches.map((match) => (
+                  <li key={`${match.page}-${match.top}-${match.x0}`} className="flex flex-wrap items-start gap-2 text-sm">
+                    <p className="min-w-0 grow basis-56 break-words">
+                      <span className="mr-2 font-medium">第 {match.page} 页</span>{match.text}
+                    </p>
+                    <Button variant="outline" onClick={() => onOpenChecklist({
+                      file_id: resultFiles[selectedIndex],
+                      filename: files[selectedIndex]?.name ?? resultFiles[selectedIndex],
+                      page: match.page,
+                      quote: match.text,
+                    })}>带入必问清单</Button>
+                  </li>
+                ))}
+              </ul>
+            )}
             <PdfViewer file={files[selectedIndex]} matches={matches} />
           </CardContent>
         </Card>

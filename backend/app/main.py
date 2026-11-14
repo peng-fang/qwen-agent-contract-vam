@@ -15,6 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.routers import clauses, contract, evidence, vam
+from app.routers import checklist
 from app.schemas import HealthResponse
 
 app = FastAPI(title='签之前 API', version='0.1.0')
@@ -33,6 +34,7 @@ app.add_middleware(
 app.include_router(contract.router)
 app.include_router(clauses.router)
 app.include_router(vam.router)
+app.include_router(checklist.router)
 app.include_router(evidence.router)
 
 
