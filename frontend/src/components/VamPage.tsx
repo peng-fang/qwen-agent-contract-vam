@@ -32,14 +32,22 @@ function riskColor(risk: number): string {
 function buildGraph(tree: VamResult['tree']) {
   const nodes: Node[] = []
   const edges: Edge[] = []
+  const seenIds = new Set<string>()
   let order = 0
 
   function walk(node: VamTreeNode, depth: number, parentId?: string) {
     const y = order * 130
     order += 1
+    let uniqueId = node.id
+    let suffix = 0
+    while (seenIds.has(uniqueId)) {
+      suffix += 1
+      uniqueId = `${node.id}-${suffix}`
+    }
+    seenIds.add(uniqueId)
     const risk = node.evaluation?.risk_score ?? node._risk ?? 5
     nodes.push({
-      id: node.id,
+      id: uniqueId,
       position: { x: depth * 280, y },
       data: {
         label: node.branch,
@@ -57,17 +65,35 @@ function buildGraph(tree: VamResult['tree']) {
     })
     if (parentId) {
       edges.push({
-        id: `${parentId}-${node.id}`,
+        id: `${parentId}-${uniqueId}`,
         source: parentId,
-        target: node.id,
+        target: uniqueId,
         type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       })
     }
-    node.children?.forEach((c) => walk(c, depth + 1, node.id))
+    node.children?.forEach((c) => walk(c, depth + 1, uniqueId))
   }
 
-  tree.branches.forEach((b) => walk(b, 0))
+  const rootId = '__scenario_root__'
+  seenIds.add(rootId)
+  const rootY = Math.max(0, (tree.branches.length - 1) * 65)
+  nodes.push({
+    id: rootId,
+    position: { x: 0, y: rootY },
+    data: { label: '合同情景', risk: 5, score: null },
+    style: {
+      background: '#f1f5f9',
+      border: '1px solid #cbd5e1',
+      borderRadius: 8,
+      padding: '10px 12px',
+      width: 160,
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#334155',
+    },
+  })
+  tree.branches.forEach((b) => walk(b, 1, rootId))
   return { nodes, edges }
 }
 
