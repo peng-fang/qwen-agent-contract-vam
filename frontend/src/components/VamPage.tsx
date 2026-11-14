@@ -1,398 +1,263 @@
-import { useMemo, useState } from 'react'
-import {
-  Background,
-  Controls,
-  MarkerType,
-  ReactFlow,
-  type Edge,
-  type Node,
-} from '@xyflow/react'
-import '@xyflow/react/dist/style.css'
-import { Badge } from '@/components/ui/badge'
+import { useRef, useState, type FormEvent } from 'react'
+import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { deepenVam, exportVam, runVam, type VamResult, type VamTreeNode } from '@/lib/api'
-import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
+import {
+  compareVam, deepenVam, exportVam, runVam,
+  type VamAction, type VamEvidenceInput, type VamResult, type VamStudy, type VamTrigger,
+} from '@/lib/api'
+import { ActionFields, WeightInputs } from './VamInputs'
+import { VamResults } from './VamResults'
+import { defaultWeights, examples, fieldClass, nodePath, objectives, roles, templates } from '@/lib/vam'
 
-const EVIDENCE_EXAMPLE =
-  '某消费品牌以 1.5 亿元估值融资 3000 万元，签 3 年对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报，否则按年化 10% 回购，或以股权补偿；若逾期回购，另按未付金额每日 0.05% 支付违约金。品牌当前年营收 4000 万元，账上现金 2500 万元，行业增速放缓。请推演 3 年后可能情景，并对每个分支评估违约风险、落地可行性、预期损失和依据。'
+const emptyStudy: VamStudy = {
+  role: null, objective: null, template: 'qualitative', actions: [],
+  experimental_scoring: false, weights: defaultWeights,
+}
+const headingPanel = 'space-y-4 rounded-xl border border-border bg-background p-4 sm:p-6'
 
-const EXAMPLES = [
-  EVIDENCE_EXAMPLE,
-  '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
-  '某消费品牌以 1.2 亿元估值融资 3000 万元，签对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报；否则按年化 12% 回购，或向投资人补偿股权。请推演 3 年后可能的结局和最优策略。',
-]
-
-function riskColor(risk: number): string {
-  if (risk >= 7) return '#fee2e2'
-  if (risk >= 4) return '#fef3c7'
-  return '#dcfce7'
+function message(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const detail: unknown = error.response?.data?.detail
+    if (typeof detail === 'string') return detail
+    if (Array.isArray(detail)) {
+      return detail.map((item) => String(item.msg ?? '输入有误')).join('。')
+    }
+  }
+  return error instanceof Error ? error.message : '请求失败，请重试。'
 }
 
-function buildGraph(tree: VamResult['tree']) {
-  const nodes: Node[] = []
-  const edges: Edge[] = []
-  const seenIds = new Set<string>()
-  const NODE_WIDTH = 220
-  const H_GAP = 40
-  const V_GAP = 180
-  const rootId = '__scenario_root__'
-
-  function uniqueId(node: VamTreeNode) {
-    let id = node.id
-    let suffix = 0
-    while (seenIds.has(id)) {
-      suffix += 1
-      id = `${node.id}-${suffix}`
-    }
-    seenIds.add(id)
-    return id
-  }
-
-  function subtreeWidth(node: VamTreeNode): number {
-    const children = node.children ?? []
-    if (!children.length) return NODE_WIDTH
-    return children.reduce((sum, child) => sum + subtreeWidth(child), 0) + H_GAP * (children.length - 1)
-  }
-
-  function place(node: VamTreeNode, depth: number, left: number, parentId?: string) {
-    const width = subtreeWidth(node)
-    const id = uniqueId(node)
-    const risk = node.evaluation?.risk_score ?? node._risk ?? 5
-    nodes.push({
-      id,
-      position: { x: left + width / 2 - 100, y: depth * V_GAP },
-      data: {
-        label: node.branch,
-        risk,
-        score: node.evaluation?.total_score ?? null,
-      },
-      style: {
-        background: riskColor(risk),
-        border: '1px solid #e5e7eb',
-        borderRadius: 8,
-        padding: '10px 12px',
-        width: 200,
-        fontSize: 13,
-      },
-    })
-    if (parentId) {
-      edges.push({
-        id: `${parentId}-${id}`,
-        source: parentId,
-        target: id,
-        type: 'smoothstep',
-        markerEnd: { type: MarkerType.ArrowClosed },
-      })
-    }
-
-    let cursor = left
-    for (const child of node.children ?? []) {
-      place(child, depth + 1, cursor, id)
-      cursor += subtreeWidth(child) + H_GAP
-    }
-  }
-
-  const branches = tree.branches ?? []
-  const totalWidth =
-    branches.reduce((sum, branch) => sum + subtreeWidth(branch), 0) + H_GAP * Math.max(0, branches.length - 1)
-
-  seenIds.add(rootId)
-  nodes.push({
-    id: rootId,
-    position: { x: totalWidth / 2 - 80, y: 0 },
-    data: { label: '合同情景', risk: 5, score: null },
-    style: {
-      background: '#f1f5f9',
-      border: '1px solid #cbd5e1',
-      borderRadius: 8,
-      padding: '10px 12px',
-      width: 160,
-      fontSize: 13,
-      fontWeight: 600,
-      color: '#334155',
-    },
-  })
-
-  let cursor = 0
-  for (const branch of branches) {
-    place(branch, 1, cursor, rootId)
-    cursor += subtreeWidth(branch) + H_GAP
-  }
-  return { nodes, edges }
+function selectedFor(result: VamResult, preferred = ''): string {
+  return nodePath(result.tree.branches, preferred).length
+    ? preferred
+    : result.comparison.scenarios[0]?.leaf_id ?? ''
 }
 
-export function VamPage() {
+function validateActions(actions: VamAction[]) {
+  const labels = actions.map((action) => action.label.trim())
+  if (labels.includes('') || new Set(labels).size !== labels.length) {
+    throw new Error('每个方案需要不同的名称。')
+  }
+}
+
+export function VamPage({ evidence, onRemoveEvidence }: {
+  evidence: VamEvidenceInput[]
+  onRemoveEvidence: (index: number) => void
+}) {
   const [query, setQuery] = useState('')
+  const [study, setStudy] = useState<VamStudy>(emptyStudy)
   const [result, setResult] = useState<VamResult | null>(null)
-  const [history, setHistory] = useState<VamResult[]>([])
-  const [selectedLeaf, setSelectedLeaf] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [history, setHistory] = useState<{ result: VamResult; selectedId: string }[]>([])
+  const [selectedId, setSelectedId] = useState('')
+  const [actions, setActions] = useState<VamAction[]>([])
+  const [weights, setWeights] = useState(defaultWeights)
+  const [loading, setLoading] = useState('')
   const [error, setError] = useState('')
-  const [report, setReport] = useState('')
-  const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
+  const resultsRef = useRef<HTMLDivElement>(null)
 
-  const graph = useMemo(() => (result ? buildGraph(result.tree) : { nodes: [], edges: [] }), [result])
+  function show(next: VamResult, preferred = '') {
+    setResult(next)
+    setSelectedId(selectedFor(next, preferred))
+    setActions(next.study.actions)
+    setWeights(next.study.weights)
+  }
 
-  async function run() {
+  function applyExample(example: typeof examples[number]) {
+    setQuery(example.query)
+    setStudy({ ...emptyStudy, role: example.role, template: example.template, objective: 'cash', actions: example.actions })
     setError('')
-    setResult(null)
-    setReport('')
-    if (!query.trim()) {
-      setError('请输入要推演的对赌条款或决策背景。')
-      return
-    }
-    setLoading(true)
+  }
+
+  async function perform(label: string, operation: () => Promise<void>) {
+    setError('')
+    setLoading(label)
     try {
-      const res = await runVam(query)
-      setResult(res)
-      setHistory([])
-      setSelectedLeaf(res.ranked[0]?.leaf_id ?? '')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '推演失败')
+      await operation()
+    } catch (error) {
+      setError(message(error))
     } finally {
-      setLoading(false)
+      setLoading('')
     }
+  }
+
+  async function run(e: FormEvent) {
+    e.preventDefault()
+    await perform('正在生成合同情景…', async () => {
+      if (!query.trim() && !evidence.length) throw new Error('填写条款、背景，或从核验页带入原文。')
+      validateActions(study.actions)
+      if (study.experimental_scoring && (!study.role || !study.objective)) {
+        throw new Error('开启实验评分前，请选择身份和关注目标。')
+      }
+      const next = await runVam(query, study, evidence)
+      setHistory([])
+      show(next)
+      requestAnimationFrame(() => resultsRef.current?.focus())
+    })
+  }
+
+  async function compare(triggerOverride?: { id: string; value: VamTrigger }) {
+    if (!result) return
+    await perform('正在重新比较…', async () => {
+      if (!triggerOverride) validateActions(actions)
+      const next = await compareVam(result, triggerOverride ? result.study.actions : actions,
+        triggerOverride ? result.study.weights : weights,
+        triggerOverride ? { [triggerOverride.id]: triggerOverride.value } : {})
+      setHistory((items) => [...items.slice(-10), { result, selectedId }])
+      if (triggerOverride) {
+        setResult(next)
+        setSelectedId(triggerOverride.id)
+      } else {
+        show(next, selectedId)
+      }
+    })
   }
 
   async function deepen() {
-    if (!result || !selectedLeaf) return
-    setLoading(true)
-    setError('')
-    try {
-      const res = await deepenVam(result, selectedLeaf)
-      setHistory((h) => [...h, result])
-      setResult(res)
-      setSelectedLeaf(res.ranked[0]?.leaf_id ?? '')
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '展开失败')
-    } finally {
-      setLoading(false)
-    }
+    if (!result || !selectedId) return
+    await perform('正在展开所选情景…', async () => {
+      const next = await deepenVam(result, selectedId)
+      setHistory((items) => [...items.slice(-10), { result, selectedId }])
+      const child = next.comparison.scenarios.find((scenario) => scenario.path.includes(selectedId))
+      show(next, child?.leaf_id ?? selectedId)
+    })
   }
 
   function back() {
-    if (!history.length) {
-      setError('已经是最初结果。')
-      return
-    }
+    const previous = history.at(-1)
+    if (!previous) return
     setError('')
-    const prev = history[history.length - 1]
     setHistory(history.slice(0, -1))
-    setResult(prev)
-    setSelectedLeaf(prev.ranked[0]?.leaf_id ?? '')
+    show(previous.result, previous.selectedId)
   }
 
   async function download() {
     if (!result) return
-    try {
-      const md = await exportVam(result)
-      setReport(md)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : '导出失败')
-    }
+    await perform('正在生成报告…', async () => {
+      const report = await exportVam(result)
+      const href = URL.createObjectURL(new Blob([report], { type: 'text/markdown;charset=utf-8' }))
+      const link = document.createElement('a')
+      link.href = href
+      link.download = '合同情景分析报告.md'
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(href), 1000)
+    })
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">合同情景推演与决策评分</h1>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">
-          输入对赌条款或关键决策背景，系统用两个 Agent 先生成情景分支、再打分排序，最后渲染成可展开的决策树。
-          结果只是情景推演，不是真实预测，也不构成投资或法律建议。
+    <div className="mx-auto max-w-6xl space-y-5">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">合同情景分析与方案比较</h1>
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+          看清哪些条件会触发合同义务，比较不同方案的金额、付款时间和待确认事项，并回查合同原文。
         </p>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,560px)_minmax(0,1fr)]">
-        <div className="space-y-4">
-          <div className="rounded-lg border border-border bg-background p-4 shadow-sm">
-            <label className="mb-1 block text-sm font-medium">对赌条款 / 决策背景</label>
-            <Textarea
-              className="min-h-[170px]"
-              placeholder="例：融资 1000 万，3 年净利润对赌 3000 万，否则年化 8% 回购或股权补偿……"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <Button
-              className="mt-4 w-full bg-orange-500 text-white hover:bg-orange-600"
-              onClick={run}
-              disabled={loading}
-            >
-              {loading ? '推演中…' : '开始推演'}
-            </Button>
-
-            <label className="mb-1 mt-4 block text-sm font-medium">选择叶子分支</label>
-            <select
-              className="h-9 w-full rounded-md border border-border bg-background px-2 text-sm"
-              value={selectedLeaf}
-              onChange={(e) => setSelectedLeaf(e.target.value)}
-              disabled={!result}
-            >
-              {result?.ranked.map((r) => (
-                <option key={r.leaf_id} value={r.leaf_id}>
-                  {r.path.join(' → ')}｜{r.branch}
-                </option>
-              ))}
-            </select>
-
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Button variant="secondary" onClick={deepen} disabled={!result || loading}>
-                沿此分支继续推演
+      <form className={headingPanel} onSubmit={run}>
+        <fieldset className="space-y-4" disabled={Boolean(loading)}>
+          <legend className="mb-3 text-lg font-semibold">条款与比较目标</legend>
+          <div className="flex flex-wrap gap-2" aria-label="填入示例">
+            {examples.map((example) => (
+              <Button key={example.title} type="button" variant="outline" className="min-h-11" onClick={() => applyExample(example)}>
+                {example.title}
               </Button>
-              <Button variant="secondary" onClick={back} disabled={!result}>
-                回溯一步
-              </Button>
-            </div>
-
-            <Button className="mt-3 w-full" variant="secondary" onClick={download} disabled={!result}>
-              导出 Markdown 报告
-            </Button>
-
-            <div className="mt-4 min-h-[170px] rounded-md border border-dashed border-border p-3">
-              <div className="text-xs text-muted-foreground">📄 下载报告</div>
-              <div className="mt-10 text-center">
-                {report ? (
-                  <a
-                    className="text-sm font-medium text-blue-600 underline"
-                    href={`data:text/markdown;charset=utf-8,${encodeURIComponent(report)}`}
-                    download="vam_report.md"
-                  >
-                    下载 Markdown 报告
-                  </a>
-                ) : (
-                  <span className="text-4xl text-muted-foreground/40">📄</span>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <h2 className="text-lg font-semibold">结果</h2>
-              {!result ? (
-                <p className="mt-1 text-sm text-muted-foreground">（等待输入）</p>
-              ) : (
-                <div className="mt-2 space-y-2 text-sm">
-                  <div>
-                    <span className="font-medium">推荐路径：</span>
-                    {result.best.path?.join(' → ')}（{result.best.branch}） — 总分{' '}
-                    {result.best.total_score} / 100
+            ))}
+          </div>
+          {!query && !result && (
+            <p className="rounded-md bg-muted p-3 text-sm leading-6 text-muted-foreground">
+              例如，业绩未达标时，回购原条款的条件金额为 1240 万元。若协商后的回购上限为 1100 万元，该情景下少承担 140 万元。
+            </p>
+          )}
+          <label className="block space-y-1 text-sm font-medium">
+            <span>合同条款或补充背景</span>
+            <Textarea rows={4} maxLength={12000} value={query} onChange={(e) => setQuery(e.target.value)}
+              placeholder="粘贴条款，或补充已从核验页带入的条款背景。" />
+          </label>
+          {evidence.length > 0 && (
+            <div className="space-y-2 rounded-lg border p-3 text-sm">
+              <h3 className="font-semibold">从合同核验带入的原文</h3>
+              {evidence.map((item, index) => (
+                <div key={item.file_id + item.page + item.quote} className="flex items-start justify-between gap-3 border-t pt-2">
+                  <div className="min-w-0 break-words">
+                    <p className="font-medium">{item.filename} · 第 {item.page} 页</p>
+                    <p className="whitespace-pre-wrap text-muted-foreground">{item.quote}</p>
                   </div>
-                  <table className="w-full border-collapse text-xs">
-                    <thead>
-                      <tr className="bg-muted">
-                        <th className="border border-border px-2 py-1 text-left">排序</th>
-                        <th className="border border-border px-2 py-1 text-left">分支</th>
-                        <th className="border border-border px-2 py-1 text-left">总分</th>
-                        <th className="border border-border px-2 py-1 text-left">违约风险</th>
-                        <th className="border border-border px-2 py-1 text-left">可行性</th>
-                        <th className="border border-border px-2 py-1 text-left">预期损失</th>
-                        <th className="border border-border px-2 py-1 text-left">置信度</th>
-                        <th className="border border-border px-2 py-1 text-left">依据</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {result.ranked.map((r, i) => (
-                        <tr key={r.leaf_id}>
-                          <td className="border border-border px-2 py-1">{i + 1}</td>
-                          <td className="border border-border px-2 py-1">{r.branch}</td>
-                          <td className="border border-border px-2 py-1">{r.total_score}</td>
-                          <td className="border border-border px-2 py-1">
-                            <Badge
-                              variant={
-                                r.risk_score === null
-                                  ? 'secondary'
-                                  : r.risk_score >= 7
-                                    ? 'red'
-                                    : r.risk_score >= 4
-                                      ? 'yellow'
-                                      : 'green'
-                              }
-                            >
-                              {r.risk_score === null ? '信息不足' : r.risk_score}
-                            </Badge>
-                          </td>
-                          <td className="border border-border px-2 py-1">
-                            {r.feasibility_score === null ? '信息不足' : r.feasibility_score}
-                          </td>
-                          <td className="border border-border px-2 py-1">
-                            {r.loss_score === null ? '信息不足' : r.loss_score}
-                          </td>
-                          <td className="border border-border px-2 py-1">
-                            {r.confidence === null ? '信息不足' : r.confidence}
-                          </td>
-                          <td className="border border-border px-2 py-1">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-6 px-1.5 text-xs text-blue-600"
-                              onClick={() =>
-                                setEvidence({
-                                  quote: `${r.evidence || '【信息不足，无法评估】'}\n\n合同输入：${result.query}`,
-                                  filename: '模型输入片段',
-                                  page: null,
-                                  clauseLabel: '评分依据',
-                                })
-                              }
-                            >
-                              查看
-                            </Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <Button type="button" variant="ghost" aria-label={'移除原文 ' + (index + 1)} className="min-h-11"
+                    onClick={() => onRemoveEvidence(index)}>移除</Button>
                 </div>
-              )}
+              ))}
             </div>
-
-            <details className="mt-4 rounded-md border border-border">
-              <summary className="cursor-pointer px-3 py-2 text-sm text-muted-foreground">
-                原始 JSON（调试用）
-              </summary>
-              <pre className="max-h-72 overflow-auto border-t border-border p-3 text-xs">
-                {result ? JSON.stringify(result, null, 2) : '（暂无数据）'}
-              </pre>
-            </details>
-
-            {error && <div className="mt-3 text-sm text-red-600">{error}</div>}
+          )}
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="space-y-1 text-sm">
+              <span>我的身份</span>
+              <select className={fieldClass} value={study.role ?? ''}
+                onChange={(e) => setStudy({ ...study, role: (e.target.value || null) as VamStudy['role'] })}>
+                <option value="">请选择</option>
+                {Object.entries(roles).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>关注目标</span>
+              <select className={fieldClass} value={study.objective ?? ''}
+                onChange={(e) => setStudy({ ...study, objective: (e.target.value || null) as VamStudy['objective'] })}>
+                <option value="">请选择</option>
+                {Object.entries(objectives).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+            <label className="space-y-1 text-sm">
+              <span>分析内容</span>
+              <select className={fieldClass} value={study.template}
+                onChange={(e) => setStudy({ ...study, template: e.target.value as VamStudy['template'],
+                  actions: study.actions.map((action) => ({ ...action, parameters: {} })) })}>
+                {Object.entries(templates).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
           </div>
-        </div>
+          <details open={study.actions.length > 0 || undefined} className="space-y-3 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">填写方案与计算参数</summary>
+            {study.template !== 'qualitative' && <p className="text-sm text-muted-foreground">
+              金额比较适用于触发条件相同的方案。若修改的是触发门槛或适用范围，请改用条款比较，或重新填写背景后推演。
+            </p>}
+            <ActionFields template={study.template} actions={study.actions} onChange={(next) => setStudy({ ...study, actions: next })} />
+          </details>
+          <details className="space-y-3 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-medium">实验评分设置{study.experimental_scoring && '（已开启）'}</summary>
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input type="checkbox" checked={study.experimental_scoring}
+                onChange={(e) => setStudy({ ...study, experimental_scoring: e.target.checked })} />
+              为外部情景生成实验评分
+            </label>
+            <p className="text-sm text-muted-foreground">用于观察不利程度、应对条件和条件负担。方案依据条件后果进行比较。</p>
+            {study.experimental_scoring &&
+              <WeightInputs value={study.weights} onChange={(next) => setStudy({ ...study, weights: next })} />}
+          </details>
+          <Button type="submit" className="min-h-11">{result ? '按当前输入重新推演' : '开始情景分析'}</Button>
+        </fieldset>
+      </form>
 
-        <div className="min-w-0">
-          <div className="h-[640px] rounded-lg border border-border bg-background shadow-sm">
-            {result ? (
-              <ReactFlow nodes={graph.nodes} edges={graph.edges} fitView>
-                <Background />
-                <Controls />
-              </ReactFlow>
-            ) : (
-              <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                决策树将在这里显示
-              </div>
-            )}
-          </div>
-        </div>
+      <div aria-live="polite">
+        {loading && <p className="rounded-md bg-blue-50 p-3 text-sm font-medium text-blue-900">{loading}</p>}
       </div>
+      {error && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-900">{error}</p>}
 
-      <div>
-        <h2 className="mb-2 text-base font-semibold">示例</h2>
-        <div className="space-y-2">
-          {EXAMPLES.map((e) => (
-            <button
-              key={e}
-              className="w-full rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:bg-accent"
-              onClick={() => setQuery(e)}
-            >
-              {e}
-            </button>
-          ))}
+      {result && (
+        <div ref={resultsRef} tabIndex={-1} className="space-y-4">
+          <VamResults result={result} selectedId={selectedId} setSelectedId={setSelectedId} busy={Boolean(loading)}
+            onDeepen={() => void deepen()} canBack={history.length > 0} onBack={back} onExport={() => void download()}
+            onTrigger={(id, value) => void compare({ id, value })} />
+          <details className={headingPanel}>
+            <summary className="cursor-pointer text-lg font-semibold">调整方案与参数</summary>
+            <p className="text-sm text-muted-foreground">修改回购利率、责任上限或其他参数，直接比较当前情景下的新结果。修改条款文字后，可重新推演以更新模型说明。</p>
+            <form onSubmit={(e) => { e.preventDefault(); void compare() }}>
+              <fieldset disabled={Boolean(loading)} className="space-y-4">
+                <ActionFields template={result.study.template} actions={actions} onChange={setActions} />
+                {result.study.experimental_scoring && <WeightInputs value={weights} onChange={setWeights} />}
+                <Button type="submit" className="min-h-11">按新参数重新比较</Button>
+              </fieldset>
+            </form>
+          </details>
         </div>
-      </div>
-
-      <EvidenceDrawer
-        open={Boolean(evidence)}
-        evidence={evidence}
-        onClose={() => setEvidence(null)}
-      />
+      )}
     </div>
   )
 }

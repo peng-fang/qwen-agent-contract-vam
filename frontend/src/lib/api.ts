@@ -9,16 +9,65 @@ export interface EvidenceMatch {
   text: string
 }
 
-export interface VamRanked {
-  path: string[]
-  branch: string
+export type VamRole = 'tenant' | 'landlord' | 'company' | 'investor' | 'other'
+export type VamObjective = 'cash' | 'liability' | 'timing' | 'equity'
+export type VamTemplate = 'repurchase' | 'lease_exit' | 'qualitative'
+export type VamTrigger = 'met' | 'not_met' | 'unknown'
+export type VamWeights = Record<'risk_score' | 'feasibility_score' | 'loss_score', number>
+
+export interface VamEvidenceInput {
+  file_id: string
+  filename: string
+  page: number
+  quote: string
+}
+
+export interface VamAction {
+  label: string
+  terms: string
+  parameters: Record<string, string | number | boolean | null>
+}
+
+export interface VamStudy {
+  role: VamRole | null
+  objective: VamObjective | null
+  template: VamTemplate
+  actions: VamAction[]
+  experimental_scoring: boolean
+  weights: VamWeights
+}
+
+export interface VamEvaluation {
   leaf_id: string
   risk_score: number | null
   feasibility_score: number | null
   loss_score: number | null
   confidence: number | null
   evidence: string
-  total_score: number
+  scorer_model?: string | null
+  total_score: number | null
+  status: 'valid' | 'missing' | 'invalid' | 'error' | 'disabled'
+  invalid_fields: string[]
+}
+
+export interface VamConsequence {
+  action_id: string
+  amount: number | null
+  payment_days: number | null
+  cap: number | null
+  missing: string[]
+  formula: string
+  effect: string
+}
+
+export interface VamScenarioComparison {
+  leaf_id: string
+  path: string[]
+  branch: string
+  trigger: VamTrigger
+  cells: VamConsequence[]
+  preferred_action_ids: string[]
+  reason: string
 }
 
 export interface VamTreeNode {
@@ -29,36 +78,37 @@ export interface VamTreeNode {
   risks: string[]
   upsides: string[]
   key_variables: string[]
+  trigger: VamTrigger
+  trigger_override?: VamTrigger
+  evidence_ids: string[]
   children: VamTreeNode[]
-  evaluation?: {
-    leaf_id: string
-    risk_score: number | null
-    feasibility_score: number | null
-    loss_score: number | null
-    confidence: number | null
-    evidence: string
-    total_score: number
-  }
-  _risk?: number
+  evaluation?: VamEvaluation
+  _risk?: number | null
 }
 
 export interface VamResult {
+  run_id: string
   query: string
   scenario: string
   assumptions: string[]
   uncertainties: string[]
+  warnings: string[]
   tree: {
     scenario: string
     assumptions: string[]
     uncertainties: string[]
+    trigger_excerpt?: { quote: string; evidence_id: string | null } | null
     branches: VamTreeNode[]
   }
-  ranked: VamRanked[]
-  best: {
-    path: string[]
-    branch: string
-    leaf_id: string
-    total_score: number
+  study: Omit<VamStudy, 'actions'> & {
+    actions: (VamAction & { id: string })[]
+    evidence: (Omit<VamEvidenceInput, 'file_id'> & { id: string })[]
+  }
+  comparison: {
+    template: VamTemplate
+    direction: 'pay' | 'receive' | null
+    scenarios: VamScenarioComparison[]
+    max_amounts: Record<string, number | null>
   }
 }
 
@@ -81,19 +131,25 @@ export async function searchEvidence(filename: string, query: string) {
   return res.data.matches
 }
 
-export async function runVam(query: string) {
-  const res = await axios.post<VamResult>('/api/vam/run', { query })
+export async function runVam(query: string, study: VamStudy, evidence: VamEvidenceInput[]) {
+  const res = await axios.post<VamResult>('/api/vam/run', { query, ...study, evidence })
   return res.data
 }
 
 export async function deepenVam(result: VamResult, leafId: string) {
-  const res = await axios.post<VamResult>('/api/vam/deepen', { result, leaf_id: leafId })
+  const res = await axios.post<VamResult>('/api/vam/deepen', { result: { run_id: result.run_id }, leaf_id: leafId })
   return res.data
 }
 
 export async function exportVam(result: VamResult) {
-  const res = await axios.post<{ markdown: string }>('/api/vam/export', { result })
+  const res = await axios.post<{ markdown: string }>('/api/vam/export', { result: { run_id: result.run_id } })
   return res.data.markdown
+}
+
+export async function compareVam(result: VamResult, actions: VamAction[], weights: VamWeights,
+  triggers: Record<string, VamTrigger> = {}) {
+  const res = await axios.post<VamResult>('/api/vam/compare', { run_id: result.run_id, actions, weights, triggers })
+  return res.data
 }
 
 export type ClauseType =
