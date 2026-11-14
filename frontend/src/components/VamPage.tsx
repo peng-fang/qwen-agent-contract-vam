@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { deepenVam, exportVam, runVam, type VamResult, type VamTreeNode } from '@/lib/api'
+import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
 
 const EXAMPLES = [
   '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
@@ -74,6 +75,7 @@ export function VamPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState('')
+  const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
 
   const graph = useMemo(() => (result ? buildGraph(result.tree) : { nodes: [], edges: [] }), [result])
 
@@ -229,6 +231,7 @@ export function VamPage() {
                         <th className="border border-border px-2 py-1 text-left">可行性</th>
                         <th className="border border-border px-2 py-1 text-left">预期损失</th>
                         <th className="border border-border px-2 py-1 text-left">置信度</th>
+                        <th className="border border-border px-2 py-1 text-left">依据</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -260,6 +263,23 @@ export function VamPage() {
                           </td>
                           <td className="border border-border px-2 py-1">
                             {r.confidence === null ? '信息不足' : r.confidence}
+                          </td>
+                          <td className="border border-border px-2 py-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1.5 text-xs text-blue-600"
+                              onClick={() =>
+                                setEvidence({
+                                  quote: r.evidence || '【信息不足，无法评估】',
+                                  filename: '模型输入片段',
+                                  page: null,
+                                  clauseLabel: '评分依据',
+                                })
+                              }
+                            >
+                              查看
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -312,6 +332,12 @@ export function VamPage() {
           ))}
         </div>
       </div>
+
+      <EvidenceDrawer
+        open={Boolean(evidence)}
+        evidence={evidence}
+        onClose={() => setEvidence(null)}
+      />
     </div>
   )
 }

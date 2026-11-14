@@ -9,6 +9,7 @@ import {
   type ClauseVerdict,
   type ClauseExtractionResult,
 } from '@/lib/api'
+import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
 
 const CLAUSE_ORDER = [
   'refund',
@@ -48,7 +49,15 @@ function compact(text: string): string {
   return text.replace(/\s+/g, ' ').trim()
 }
 
-function EvidenceCell({ side }: { side: ClauseSide | null | undefined }) {
+function EvidenceCell({
+  side,
+  file,
+  onOpen,
+}: {
+  side: ClauseSide | null | undefined
+  file?: File | null
+  onOpen: (evidence: EvidenceDetail, file?: File | null) => void
+}) {
   if (!side || !side.evidences.length) {
     return <span className="text-sm text-muted-foreground">未找到相关原文</span>
   }
@@ -56,7 +65,23 @@ function EvidenceCell({ side }: { side: ClauseSide | null | undefined }) {
   return (
     <div className="space-y-2">
       {shown.map((evidence) => (
-        <div key={`${evidence.document_id}-${evidence.char_start}`} className="space-y-1">
+        <button
+          key={`${evidence.document_id}-${evidence.char_start}`}
+          type="button"
+          className="w-full space-y-1 rounded-md border border-transparent p-1 text-left transition-colors hover:border-border hover:bg-accent/60"
+          onClick={() =>
+            onOpen(
+              {
+                quote: evidence.quote,
+                filename: evidence.filename,
+                page: evidence.page,
+                clauseLabel: side.fields.clause_ref || undefined,
+              },
+              file,
+            )
+          }
+          aria-label={`查看第 ${evidence.page} 页证据原文`}
+        >
           <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             <Badge variant="secondary">第 {evidence.page} 页</Badge>
             <span className="truncate">{evidence.filename}</span>
@@ -70,7 +95,8 @@ function EvidenceCell({ side }: { side: ClauseSide | null | undefined }) {
           >
             {compact(evidence.quote)}
           </blockquote>
-        </div>
+          <div className="text-xs font-medium text-blue-600">查看原文 →</div>
+        </button>
       ))}
       {side.evidences.length > shown.length && (
         <div className="text-xs text-muted-foreground">
@@ -81,7 +107,19 @@ function EvidenceCell({ side }: { side: ClauseSide | null | undefined }) {
   )
 }
 
-function MatchRow({ clauseType, match }: { clauseType: string; match?: ClauseMatch }) {
+function MatchRow({
+  clauseType,
+  match,
+  promoFile,
+  contractFile,
+  onOpen,
+}: {
+  clauseType: string
+  match?: ClauseMatch
+  promoFile?: File | null
+  contractFile?: File | null
+  onOpen: (evidence: EvidenceDetail, file?: File | null) => void
+}) {
   const verdict = match?.verdict
   const conflict = verdict === 'conflict'
   const label = match?.clause_label ?? CLAUSE_LABEL[clauseType as (typeof CLAUSE_ORDER)[number]]
@@ -115,10 +153,10 @@ function MatchRow({ clauseType, match }: { clauseType: string; match?: ClauseMat
         )}
       </td>
       <td className="border-t border-border p-3 align-top">
-        <EvidenceCell side={match?.promo} />
+        <EvidenceCell side={match?.promo} file={promoFile} onOpen={onOpen} />
       </td>
       <td className="border-t border-border p-3 align-top">
-        <EvidenceCell side={match?.contract} />
+        <EvidenceCell side={match?.contract} file={contractFile} onOpen={onOpen} />
       </td>
     </tr>
   )
@@ -130,6 +168,13 @@ export function ClauseComparePage() {
   const [result, setResult] = useState<ClauseExtractionResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
+  const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
+
+  function openEvidence(detail: EvidenceDetail, file?: File | null) {
+    setEvidence(detail)
+    setEvidenceFile(file ?? null)
+  }
 
   const counts = useMemo(() => {
     const counter = { conflict: 0, missing: 0, consistent: 0 }
@@ -266,13 +311,30 @@ export function ClauseComparePage() {
               </thead>
               <tbody>
                 {rows.map(({ clauseType, match }) => (
-                  <MatchRow key={clauseType} clauseType={clauseType} match={match} />
+                  <MatchRow
+                    key={clauseType}
+                    clauseType={clauseType}
+                    match={match}
+                    promoFile={promoFile}
+                    contractFile={contractFile}
+                    onOpen={openEvidence}
+                  />
                 ))}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
+
+      <EvidenceDrawer
+        open={Boolean(evidence)}
+        evidence={evidence}
+        file={evidenceFile}
+        onClose={() => {
+          setEvidence(null)
+          setEvidenceFile(null)
+        }}
+      />
     </div>
   )
 }
