@@ -33,22 +33,35 @@ function buildGraph(tree: VamResult['tree']) {
   const nodes: Node[] = []
   const edges: Edge[] = []
   const seenIds = new Set<string>()
-  let order = 0
+  const NODE_WIDTH = 220
+  const H_GAP = 40
+  const V_GAP = 180
+  const rootId = '__scenario_root__'
 
-  function walk(node: VamTreeNode, depth: number, parentId?: string) {
-    const y = order * 130
-    order += 1
-    let uniqueId = node.id
+  function uniqueId(node: VamTreeNode) {
+    let id = node.id
     let suffix = 0
-    while (seenIds.has(uniqueId)) {
+    while (seenIds.has(id)) {
       suffix += 1
-      uniqueId = `${node.id}-${suffix}`
+      id = `${node.id}-${suffix}`
     }
-    seenIds.add(uniqueId)
+    seenIds.add(id)
+    return id
+  }
+
+  function subtreeWidth(node: VamTreeNode): number {
+    const children = node.children ?? []
+    if (!children.length) return NODE_WIDTH
+    return children.reduce((sum, child) => sum + subtreeWidth(child), 0) + H_GAP * (children.length - 1)
+  }
+
+  function place(node: VamTreeNode, depth: number, left: number, parentId?: string) {
+    const width = subtreeWidth(node)
+    const id = uniqueId(node)
     const risk = node.evaluation?.risk_score ?? node._risk ?? 5
     nodes.push({
-      id: uniqueId,
-      position: { x: depth * 280, y },
+      id,
+      position: { x: left + width / 2 - 100, y: depth * V_GAP },
       data: {
         label: node.branch,
         risk,
@@ -65,22 +78,29 @@ function buildGraph(tree: VamResult['tree']) {
     })
     if (parentId) {
       edges.push({
-        id: `${parentId}-${uniqueId}`,
+        id: `${parentId}-${id}`,
         source: parentId,
-        target: uniqueId,
+        target: id,
         type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       })
     }
-    node.children?.forEach((c) => walk(c, depth + 1, uniqueId))
+
+    let cursor = left
+    for (const child of node.children ?? []) {
+      place(child, depth + 1, cursor, id)
+      cursor += subtreeWidth(child) + H_GAP
+    }
   }
 
-  const rootId = '__scenario_root__'
+  const branches = tree.branches ?? []
+  const totalWidth =
+    branches.reduce((sum, branch) => sum + subtreeWidth(branch), 0) + H_GAP * Math.max(0, branches.length - 1)
+
   seenIds.add(rootId)
-  const rootY = Math.max(0, (tree.branches.length - 1) * 65)
   nodes.push({
     id: rootId,
-    position: { x: 0, y: rootY },
+    position: { x: totalWidth / 2 - 80, y: 0 },
     data: { label: '合同情景', risk: 5, score: null },
     style: {
       background: '#f1f5f9',
@@ -93,7 +113,12 @@ function buildGraph(tree: VamResult['tree']) {
       color: '#334155',
     },
   })
-  tree.branches.forEach((b) => walk(b, 1, rootId))
+
+  let cursor = 0
+  for (const branch of branches) {
+    place(branch, 1, cursor, rootId)
+    cursor += subtreeWidth(branch) + H_GAP
+  }
   return { nodes, edges }
 }
 
