@@ -59,18 +59,31 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 ## 启动
 
-### 1. 后端
+### 一键启动（离线包推荐）
 
 ```powershell
-cd backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+.\start.ps1              # 默认 8001，自动打开浏览器
+.\start.ps1 -NoBrowser   # 不打开浏览器
+.\start.bat               # 也可以直接双击
 ```
 
-> 端口使用 `8001`，因为本机 `8000` 已被其它项目占用。
+脚本会依次检查 Python 依赖、前端 `dist`，然后启动 FastAPI 并托管前端；按 Ctrl+C 停止。
+离线包已包含 `frontend/dist`，不需要联网执行 `npm install`。
 
-### 2. 前端开发模式
+启动后自检：
 
 ```powershell
+python scripts/smoke_api.py --base http://127.0.0.1:8001
+```
+
+### 开发模式（前后端分离）
+
+```powershell
+# 终端 1：后端
+cd backend
+..\.venv312\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+
+# 终端 2：前端
 cd frontend
 npm install
 npm run dev
@@ -78,28 +91,24 @@ npm run dev
 
 打开：<http://localhost:5173>
 
-Vite 会把 `/api` 代理到 `http://127.0.0.1:8001`。
+> 端口使用 `8001`，因为本机 `8000` 已被其它项目占用。
 
-### 3. 生产模式
+### 离线与降级行为（均已实测）
 
-```powershell
-cd frontend
-npm run build
+| 场景 | 行为 |
+| --- | --- |
+| 没有 Ollama / DashScope | 条款对照、风险评分、证据复核、评测全部可用；推演页提示「推演服务不可用：未检测到可用的模型或评分服务…」，不会白屏 |
+| 后端停止、只托管前端静态文件 | 对照页给出「无法连接条款对照服务…请确认后端已在 8001 端口启动」的可读提示，控制台无未捕获异常 |
+| 评分 sidecar 停止 | 自动回退外部评分 API → 本地模型，结果中标注回退原因；三者都不可用时给出可读错误 |
 
-cd ..\backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
-```
-
-打开：<http://127.0.0.1:8001>
-
-FastAPI 会自动托管 `frontend/dist`。
+> 开发模式下 Vite 会把 `/api` 代理到 `127.0.0.1:8001`；生产/离线模式下由 FastAPI 直接托管 `frontend/dist`。
 
 ## 目录
 
 ```text
 backend/
   app/main.py                 # FastAPI 入口 + 静态托管
-  app/routers/                # contract / vam / evidence
+  app/routers/                # contract / clauses / vam / evidence
   app/services/               # Qwen-Agent 与 vam_sandbox 封装
   app/schemas.py
   requirements.txt
@@ -122,8 +131,11 @@ clause_extraction/            # 规则抽取、跨文档匹配、evidence_id、�
 vam_sandbox/                  # 两段式（发散 + 打分）推演流水线
 mcp_servers/contract_tools.py # 退款/租金计算 MCP 工具
 tests/                        # 条款抽取、证据链、VAM 树与新增能力回归测试
-eval_data/                    # 合成标注数据（40–60 组）
+eval_data/                    # 合成标注数据（50 组）
+scripts/build_eval_dataset.py # 重建合成数据
 scripts/eval_clauses.py       # 评测脚本（规则路径，真实跑分）
+scripts/smoke_api.py          # 端到端冒烟自检
+start.ps1 / start.bat         # 一键启动
 reports/                      # 评测报告与看板
 ```
 
