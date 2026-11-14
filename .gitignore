@@ -3,11 +3,24 @@ env
 *.pyc
 __pycache__
 
+# 本地密钥：永远不要提交 .env；只提交 .env.example
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
 # 本地生成、可能含个人信息或临时报告，不进入版本库
 demo_data/ui_lease_money.png
 demo_data/vam_report_*.md
 backend/uploads/
 backend/workspace/
+intern_service/.venv/
+intern_service/models/
 
 .idea
 .vscode

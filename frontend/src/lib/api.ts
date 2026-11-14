@@ -13,14 +13,12 @@ export interface VamRanked {
   path: string[]
   branch: string
   leaf_id: string
-  benefit: number
-  risk: number
-  probability: number
-  cost: number
-  opportunity_cost: number
+  risk_score: number | null
+  feasibility_score: number | null
+  loss_score: number | null
+  confidence: number | null
+  evidence: string
   total_score: number
-  recommendation: string
-  reasons: string[]
 }
 
 export interface VamTreeNode {
@@ -34,14 +32,12 @@ export interface VamTreeNode {
   children: VamTreeNode[]
   evaluation?: {
     leaf_id: string
-    benefit: number
-    risk: number
-    probability: number
-    cost: number
-    opportunity_cost: number
+    risk_score: number | null
+    feasibility_score: number | null
+    loss_score: number | null
+    confidence: number | null
+    evidence: string
     total_score: number
-    recommendation: string
-    reasons: string[]
   }
   _risk?: number
 }
