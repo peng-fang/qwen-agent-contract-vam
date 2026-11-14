@@ -14,7 +14,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { deepenVam, exportVam, runVam, type VamResult, type VamTreeNode } from '@/lib/api'
 import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
 
+const EVIDENCE_EXAMPLE =
+  '某消费品牌以 1.5 亿元估值融资 3000 万元，签 3 年对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报，否则按年化 10% 回购，或以股权补偿；若逾期回购，另按未付金额每日 0.05% 支付违约金。品牌当前年营收 4000 万元，账上现金 2500 万元，行业增速放缓。请推演 3 年后可能情景，并对每个分支评估违约风险、落地可行性、预期损失和依据。'
+
 const EXAMPLES = [
+  EVIDENCE_EXAMPLE,
   '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
   '某消费品牌以 1.2 亿元估值融资 3000 万元，签对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报；否则按年化 12% 回购，或向投资人补偿股权。请推演 3 年后可能的结局和最优策略。',
 ]
@@ -271,7 +275,7 @@ export function VamPage() {
                               className="h-6 px-1.5 text-xs text-blue-600"
                               onClick={() =>
                                 setEvidence({
-                                  quote: r.evidence || '【信息不足，无法评估】',
+                                  quote: `${r.evidence || '【信息不足，无法评估】'}\n\n合同输入：${result.query}`,
                                   filename: '模型输入片段',
                                   page: null,
                                   clauseLabel: '评分依据',
