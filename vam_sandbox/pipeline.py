@@ -48,7 +48,8 @@ DIVERGE_SYSTEM = """你是一个"对赌协议/关键决策"的发散推演 Agent
    - 假设：你为推演而设的前提；
    - 不确定因素：你无法知道、需要外部核实的内容。
 6. 不要编造具体的政策、股价、法律条款、汇率等；遇到这类内容，写进 uncertainties 而不是当成事实。
-7. 用简体中文。
+7. 子分支必须延续父分支的前提，不能把父分支的反面写成子分支；例如父分支是“成功”，子分支不能是“失败”。
+8. 用简体中文。
 
 JSON schema（严格按此结构）：
 {
@@ -111,8 +112,9 @@ DEEPEN_SYSTEM = """你是一个"发散推演"Agent，负责沿某个已经选定
 1. 输出一个合法 JSON 对象，格式只包含一个 branches 数组，不要输出 scenario/assumptions 等其它字段。
 2. 输出 2-3 个子分支；每个子分支必须有 children: []（子分支就是新的叶子）。
 3. 每个子分支写清：branch、premise、events、risks、upsides、key_variables。
-4. 基于现实常识推演；区分"假设"和"不确定因素"，不要编造具体政策、股价、法律条款、汇率。
-5. 用简体中文。
+4. 子分支必须延续当前路径的前提，不能把父分支的反面写成子分支；例如当前路径是“成功”，子分支不能是“失败”。
+5. 基于现实常识推演；区分"假设"和"不确定因素"，不要编造具体政策、股价、法律条款、汇率。
+6. 用简体中文。
 
 JSON schema：
 {
@@ -255,6 +257,18 @@ def _normalize_node(node: Any, depth: int, counter: Dict[str, int]) -> Dict[str,
     }
 
 
+def _assign_unique_ids(tree: Dict[str, Any]) -> None:
+    """用路径重写节点 ID，避免模型返回重复 ID 导致 React Flow 节点合并。"""
+
+    def walk(node: Dict[str, Any], path: List[str]) -> None:
+        node['id'] = '.'.join(path)
+        for index, child in enumerate(node.get('children') or [], start=1):
+            walk(child, path + [str(index)])
+
+    for index, root in enumerate(tree.get('branches') or [], start=1):
+        walk(root, [f'B{index}'])
+
+
 def normalize_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(tree, dict):
         raise ValueError('推演结果不是 JSON 对象')
@@ -263,12 +277,14 @@ def normalize_tree(tree: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError('推演结果缺少 branches 数组')
 
     counter = {'n': 0}
-    return {
+    normalized = {
         'scenario': str(tree.get('scenario') or '未命名推演场景').strip(),
         'assumptions': _as_str_list(tree.get('assumptions'), 10),
         'uncertainties': _as_str_list(tree.get('uncertainties'), 10),
         'branches': [_normalize_node(b, 0, counter) for b in branches[:_MAX_BRANCHES_L1]],
     }
+    _assign_unique_ids(normalized)
+    return normalized
 
 
 def iter_leaves(node: Dict[str, Any], path: List[str]) -> List[Tuple[List[str], Dict[str, Any]]]:

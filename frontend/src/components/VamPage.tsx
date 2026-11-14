@@ -12,8 +12,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { deepenVam, exportVam, runVam, type VamResult, type VamTreeNode } from '@/lib/api'
+import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
+
+const EVIDENCE_EXAMPLE =
+  '某消费品牌以 1.5 亿元估值融资 3000 万元，签 3 年对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报，否则按年化 10% 回购，或以股权补偿；若逾期回购，另按未付金额每日 0.05% 支付违约金。品牌当前年营收 4000 万元，账上现金 2500 万元，行业增速放缓。请推演 3 年后可能情景，并对每个分支评估违约风险、落地可行性、预期损失和依据。'
 
 const EXAMPLES = [
+  EVIDENCE_EXAMPLE,
   '创业者 A 融资 1000 万元，签对赌：3 年内净利润累计达到 3000 万元；否则按年化 8% 回购投资人股份，或向投资人补偿股权。行业处于扩张期，请推演 3 年后可能的结局和最优策略。',
   '某消费品牌以 1.2 亿元估值融资 3000 万元，签对赌：3 年内累计营收达到 2 亿元且完成 IPO 申报；否则按年化 12% 回购，或向投资人补偿股权。请推演 3 年后可能的结局和最优策略。',
 ]
@@ -27,15 +32,36 @@ function riskColor(risk: number): string {
 function buildGraph(tree: VamResult['tree']) {
   const nodes: Node[] = []
   const edges: Edge[] = []
-  let order = 0
+  const seenIds = new Set<string>()
+  const NODE_WIDTH = 220
+  const H_GAP = 40
+  const V_GAP = 180
+  const rootId = '__scenario_root__'
 
-  function walk(node: VamTreeNode, depth: number, parentId?: string) {
-    const y = order * 130
-    order += 1
+  function uniqueId(node: VamTreeNode) {
+    let id = node.id
+    let suffix = 0
+    while (seenIds.has(id)) {
+      suffix += 1
+      id = `${node.id}-${suffix}`
+    }
+    seenIds.add(id)
+    return id
+  }
+
+  function subtreeWidth(node: VamTreeNode): number {
+    const children = node.children ?? []
+    if (!children.length) return NODE_WIDTH
+    return children.reduce((sum, child) => sum + subtreeWidth(child), 0) + H_GAP * (children.length - 1)
+  }
+
+  function place(node: VamTreeNode, depth: number, left: number, parentId?: string) {
+    const width = subtreeWidth(node)
+    const id = uniqueId(node)
     const risk = node.evaluation?.risk_score ?? node._risk ?? 5
     nodes.push({
-      id: node.id,
-      position: { x: depth * 280, y },
+      id,
+      position: { x: left + width / 2 - 100, y: depth * V_GAP },
       data: {
         label: node.branch,
         risk,
@@ -52,17 +78,47 @@ function buildGraph(tree: VamResult['tree']) {
     })
     if (parentId) {
       edges.push({
-        id: `${parentId}-${node.id}`,
+        id: `${parentId}-${id}`,
         source: parentId,
-        target: node.id,
+        target: id,
         type: 'smoothstep',
         markerEnd: { type: MarkerType.ArrowClosed },
       })
     }
-    node.children?.forEach((c) => walk(c, depth + 1, node.id))
+
+    let cursor = left
+    for (const child of node.children ?? []) {
+      place(child, depth + 1, cursor, id)
+      cursor += subtreeWidth(child) + H_GAP
+    }
   }
 
-  tree.branches.forEach((b) => walk(b, 0))
+  const branches = tree.branches ?? []
+  const totalWidth =
+    branches.reduce((sum, branch) => sum + subtreeWidth(branch), 0) + H_GAP * Math.max(0, branches.length - 1)
+
+  seenIds.add(rootId)
+  nodes.push({
+    id: rootId,
+    position: { x: totalWidth / 2 - 80, y: 0 },
+    data: { label: '合同情景', risk: 5, score: null },
+    style: {
+      background: '#f1f5f9',
+      border: '1px solid #cbd5e1',
+      borderRadius: 8,
+      padding: '10px 12px',
+      width: 160,
+      fontSize: 13,
+      fontWeight: 600,
+      color: '#334155',
+    },
+  })
+
+  let cursor = 0
+  for (const branch of branches) {
+    place(branch, 1, cursor, rootId)
+    cursor += subtreeWidth(branch) + H_GAP
+  }
   return { nodes, edges }
 }
 
@@ -74,6 +130,7 @@ export function VamPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [report, setReport] = useState('')
+  const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
 
   const graph = useMemo(() => (result ? buildGraph(result.tree) : { nodes: [], edges: [] }), [result])
 
@@ -229,6 +286,7 @@ export function VamPage() {
                         <th className="border border-border px-2 py-1 text-left">可行性</th>
                         <th className="border border-border px-2 py-1 text-left">预期损失</th>
                         <th className="border border-border px-2 py-1 text-left">置信度</th>
+                        <th className="border border-border px-2 py-1 text-left">依据</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -260,6 +318,23 @@ export function VamPage() {
                           </td>
                           <td className="border border-border px-2 py-1">
                             {r.confidence === null ? '信息不足' : r.confidence}
+                          </td>
+                          <td className="border border-border px-2 py-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1.5 text-xs text-blue-600"
+                              onClick={() =>
+                                setEvidence({
+                                  quote: `${r.evidence || '【信息不足，无法评估】'}\n\n合同输入：${result.query}`,
+                                  filename: '模型输入片段',
+                                  page: null,
+                                  clauseLabel: '评分依据',
+                                })
+                              }
+                            >
+                              查看
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -312,6 +387,12 @@ export function VamPage() {
           ))}
         </div>
       </div>
+
+      <EvidenceDrawer
+        open={Boolean(evidence)}
+        evidence={evidence}
+        onClose={() => setEvidence(null)}
+      />
     </div>
   )
 }
