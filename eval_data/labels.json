@@ -1,0 +1,1322 @@
+{
+  "dataset": "synthetic-contract-promo-v1",
+  "description": "40 组模板 + 10 组改写，共 50 组合成宣传/合同（单页 txt）",
+  "case_count": 50,
+  "splits": {
+    "template": 40,
+    "paraphrase": 10
+  },
+  "clause_types": [
+    "refund",
+    "penalty",
+    "auto_renewal",
+    "service_term",
+    "extra_fee"
+  ],
+  "cases": [
+    {
+      "id": "case_001",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_001_promo.txt",
+      "contract_file": "cases/case_001_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "consistent",
+        "auto_renewal": "consistent",
+        "service_term": "consistent",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_002",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_002_promo.txt",
+      "contract_file": "cases/case_002_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "conflict",
+        "auto_renewal": "conflict",
+        "service_term": "conflict",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 15 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 300 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_003",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_003_promo.txt",
+      "contract_file": "cases/case_003_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "conflict",
+        "service_term": "missing_in_contract",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 10% 手续费。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_004",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_004_promo.txt",
+      "contract_file": "cases/case_004_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "missing_in_promo",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "已上课超过 12 节的不予退费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_005",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_005_promo.txt",
+      "contract_file": "cases/case_005_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_both",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。"
+        }
+      }
+    },
+    {
+      "id": "case_006",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_006_promo.txt",
+      "contract_file": "cases/case_006_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "consistent",
+        "auto_renewal": "missing_both",
+        "service_term": "consistent",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_007",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_007_promo.txt",
+      "contract_file": "cases/case_007_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_contract",
+        "penalty": "consistent",
+        "auto_renewal": "consistent",
+        "service_term": "consistent",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_008",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_008_promo.txt",
+      "contract_file": "cases/case_008_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_promo",
+        "penalty": "conflict",
+        "auto_renewal": "unclear",
+        "service_term": "conflict",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_009",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_009_promo.txt",
+      "contract_file": "cases/case_009_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_in_contract",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_010",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_010_promo.txt",
+      "contract_file": "cases/case_010_contract.txt",
+      "expected_verdicts": {
+        "refund": "unclear",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "missing_in_promo",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_011",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_011_promo.txt",
+      "contract_file": "cases/case_011_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_both",
+        "auto_renewal": "consistent",
+        "service_term": "missing_both",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 300 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_012",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_012_promo.txt",
+      "contract_file": "cases/case_012_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "consistent",
+        "auto_renewal": "conflict",
+        "service_term": "consistent",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "penalty": "提前解约需支付 20% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 15 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_013",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_013_promo.txt",
+      "contract_file": "cases/case_013_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "consistent",
+        "auto_renewal": "conflict",
+        "service_term": "consistent",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 10% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_014",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_014_promo.txt",
+      "contract_file": "cases/case_014_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "conflict",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "conflict",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "已上课超过 12 节的不予退费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_015",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_015_promo.txt",
+      "contract_file": "cases/case_015_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_in_contract",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_016",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_016_promo.txt",
+      "contract_file": "cases/case_016_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_in_promo",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_017",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_017_promo.txt",
+      "contract_file": "cases/case_017_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_contract",
+        "penalty": "missing_both",
+        "auto_renewal": "consistent",
+        "service_term": "missing_both",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "auto_renewal": "本合同不自动续费，到期自动终止。"
+        }
+      }
+    },
+    {
+      "id": "case_018",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_018_promo.txt",
+      "contract_file": "cases/case_018_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_promo",
+        "penalty": "consistent",
+        "auto_renewal": "unclear",
+        "service_term": "consistent",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 20% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_019",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_019_promo.txt",
+      "contract_file": "cases/case_019_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "consistent",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "consistent",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_020",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_020_promo.txt",
+      "contract_file": "cases/case_020_contract.txt",
+      "expected_verdicts": {
+        "refund": "unclear",
+        "penalty": "conflict",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "conflict",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 300 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_021",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_021_promo.txt",
+      "contract_file": "cases/case_021_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "consistent",
+        "service_term": "missing_in_contract",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_022",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_022_promo.txt",
+      "contract_file": "cases/case_022_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "conflict",
+        "service_term": "missing_in_promo",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 15 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_023",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_023_promo.txt",
+      "contract_file": "cases/case_023_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_both",
+        "auto_renewal": "conflict",
+        "service_term": "missing_both",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 10% 手续费。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。"
+        }
+      }
+    },
+    {
+      "id": "case_024",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_024_promo.txt",
+      "contract_file": "cases/case_024_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "consistent",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "consistent",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        },
+        "contract": {
+          "refund": "已上课超过 12 节的不予退费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_025",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_025_promo.txt",
+      "contract_file": "cases/case_025_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "consistent",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "consistent",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_026",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_026_promo.txt",
+      "contract_file": "cases/case_026_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "conflict",
+        "auto_renewal": "missing_both",
+        "service_term": "conflict",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_027",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_027_promo.txt",
+      "contract_file": "cases/case_027_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_contract",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "consistent",
+        "service_term": "missing_in_contract",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_028",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_028_promo.txt",
+      "contract_file": "cases/case_028_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_promo",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "unclear",
+        "service_term": "missing_in_promo",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_029",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_029_promo.txt",
+      "contract_file": "cases/case_029_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_both",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "extra_fee": "储物柜 300 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_030",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_030_promo.txt",
+      "contract_file": "cases/case_030_contract.txt",
+      "expected_verdicts": {
+        "refund": "unclear",
+        "penalty": "consistent",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "consistent",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "penalty": "提前解约需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_031",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_031_promo.txt",
+      "contract_file": "cases/case_031_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "consistent",
+        "auto_renewal": "consistent",
+        "service_term": "consistent",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_032",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_032_promo.txt",
+      "contract_file": "cases/case_032_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "conflict",
+        "auto_renewal": "conflict",
+        "service_term": "conflict",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 15 日通知。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_033",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_033_promo.txt",
+      "contract_file": "cases/case_033_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "conflict",
+        "service_term": "missing_in_contract",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        },
+        "contract": {
+          "refund": "退费时扣除 10% 手续费。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_034",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_034_promo.txt",
+      "contract_file": "cases/case_034_contract.txt",
+      "expected_verdicts": {
+        "refund": "conflict",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "missing_in_promo",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。"
+        },
+        "contract": {
+          "refund": "已上课超过 12 节的不予退费。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "合同期满后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。"
+        }
+      }
+    },
+    {
+      "id": "case_035",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_035_promo.txt",
+      "contract_file": "cases/case_035_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_both",
+        "extra_fee": "missing_in_contract"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费收取 20% 手续费。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。"
+        }
+      }
+    },
+    {
+      "id": "case_036",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_036_promo.txt",
+      "contract_file": "cases/case_036_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "consistent",
+        "auto_renewal": "missing_both",
+        "service_term": "consistent",
+        "extra_fee": "missing_in_promo"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "case_037",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_037_promo.txt",
+      "contract_file": "cases/case_037_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_contract",
+        "penalty": "consistent",
+        "auto_renewal": "consistent",
+        "service_term": "consistent",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "会员未上课可申请退款，未上课全额退款。",
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_038",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_038_promo.txt",
+      "contract_file": "cases/case_038_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_in_promo",
+        "penalty": "conflict",
+        "auto_renewal": "unclear",
+        "service_term": "conflict",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "到期后自动续费一年，提前 7 日通知。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "refund": "退费时扣除 20% 手续费。",
+          "penalty": "提前解除合同需支付 20% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年2月1日至2027年1月31日。",
+          "extra_fee": "储物柜 300 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_039",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_039_promo.txt",
+      "contract_file": "cases/case_039_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_in_contract",
+        "auto_renewal": "missing_in_contract",
+        "service_term": "missing_in_contract",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前解约需支付 30% 违约金。",
+          "auto_renewal": "本会员不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        },
+        "contract": {
+          "extra_fee": "储物柜 200 元/年，体测 100 元/次。"
+        }
+      }
+    },
+    {
+      "id": "case_040",
+      "split": "template",
+      "scenario": "gym_training",
+      "promo_file": "cases/case_040_promo.txt",
+      "contract_file": "cases/case_040_contract.txt",
+      "expected_verdicts": {
+        "refund": "unclear",
+        "penalty": "missing_in_promo",
+        "auto_renewal": "missing_in_promo",
+        "service_term": "missing_in_promo",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "退费不收取任何手续费。",
+          "extra_fee": "无任何额外收费，全部免费。"
+        },
+        "contract": {
+          "refund": "乙方未上课可全额退款。",
+          "penalty": "提前解除合同需支付 30% 违约金。",
+          "auto_renewal": "本合同不自动续费，到期自动终止。",
+          "service_term": "服务期限为2026年1月1日至2026年12月31日。",
+          "extra_fee": "本课程无任何额外收费。"
+        }
+      }
+    },
+    {
+      "id": "para_001",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_001_promo.txt",
+      "contract_file": "cases/para_001_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "课程未开始前可申请退款，不扣手续费。"
+        },
+        "contract": {
+          "refund": "开课前退费不收取手续费。"
+        }
+      }
+    },
+    {
+      "id": "para_002",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_002_promo.txt",
+      "contract_file": "cases/para_002_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "conflict"
+      },
+      "gold_clauses": {
+        "promo": {
+          "extra_fee": "报名费已包含全部课程材料，无需另付。"
+        },
+        "contract": {
+          "extra_fee": "教材费 300 元/年，另收。"
+        }
+      }
+    },
+    {
+      "id": "para_003",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_003_promo.txt",
+      "contract_file": "cases/para_003_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "consistent",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "auto_renewal": "会员到期后按月自动扣费，可提前 7 天取消。"
+        },
+        "contract": {
+          "auto_renewal": "会员期满自动续费，提前 7 日通知。"
+        }
+      }
+    },
+    {
+      "id": "para_004",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_004_promo.txt",
+      "contract_file": "cases/para_004_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "conflict",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "随时可终止，不收取任何违约费用。"
+        },
+        "contract": {
+          "penalty": "提前终止需支付剩余费用 30% 的违约金。"
+        }
+      }
+    },
+    {
+      "id": "para_005",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_005_promo.txt",
+      "contract_file": "cases/para_005_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "consistent",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "service_term": "课程有效期一年，自 2026 年 3 月 1 日起算。"
+        },
+        "contract": {
+          "service_term": "服务期限为2026年3月1日至2027年2月28日。"
+        }
+      }
+    },
+    {
+      "id": "para_006",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_006_promo.txt",
+      "contract_file": "cases/para_006_contract.txt",
+      "expected_verdicts": {
+        "refund": "consistent",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "refund": "7 天内无理由退课，全额返还。"
+        },
+        "contract": {
+          "refund": "乙方在开课 7 日内可全额退款。"
+        }
+      }
+    },
+    {
+      "id": "para_007",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_007_promo.txt",
+      "contract_file": "cases/para_007_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "conflict",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "service_term": "课程共 48 周，自 2026 年 3 月 1 日开始。"
+        },
+        "contract": {
+          "service_term": "服务期限为 2026 年 3 月 1 日至 2027 年 6 月 30 日。"
+        }
+      }
+    },
+    {
+      "id": "para_008",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_008_promo.txt",
+      "contract_file": "cases/para_008_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "conflict",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "auto_renewal": "到期自动结束，不会扣款。"
+        },
+        "contract": {
+          "auto_renewal": "期满自动续费一年。"
+        }
+      }
+    },
+    {
+      "id": "para_009",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_009_promo.txt",
+      "contract_file": "cases/para_009_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "missing_both",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "consistent"
+      },
+      "gold_clauses": {
+        "promo": {
+          "extra_fee": "不收取教材费与服装费。"
+        },
+        "contract": {
+          "extra_fee": "教材费、服装费均已包含在学费内。"
+        }
+      }
+    },
+    {
+      "id": "para_010",
+      "split": "paraphrase",
+      "scenario": "gym_training",
+      "promo_file": "cases/para_010_promo.txt",
+      "contract_file": "cases/para_010_contract.txt",
+      "expected_verdicts": {
+        "refund": "missing_both",
+        "penalty": "conflict",
+        "auto_renewal": "missing_both",
+        "service_term": "missing_both",
+        "extra_fee": "missing_both"
+      },
+      "gold_clauses": {
+        "promo": {
+          "penalty": "提前终止只需结清已上课时费用，无额外罚金。"
+        },
+        "contract": {
+          "penalty": "提前退课需支付剩余课时费 20% 的违约金。"
+        }
+      }
+    }
+  ]
+}

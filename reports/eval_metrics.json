@@ -1,0 +1,3907 @@
+{
+  "generated_at": "2026-11-15 00:16:30",
+  "environment": {
+    "extractor": "rules",
+    "model_used": false,
+    "python": "3.12.14"
+  },
+  "dataset": {
+    "name": "synthetic-contract-promo-v1",
+    "description": "40 组模板 + 10 组改写，共 50 组合成宣传/合同（单页 txt）",
+    "case_count": 50,
+    "splits": {
+      "template": 40,
+      "paraphrase": 10
+    }
+  },
+  "overall": {
+    "case_count": 50,
+    "extraction": {
+      "overall": {
+        "tp": 296,
+        "fp": 1,
+        "fn": 8,
+        "precision": 0.9966,
+        "recall": 0.9737,
+        "f1": 0.985,
+        "macro_f1": 0.9848,
+        "documents": 100
+      },
+      "by_clause_type": {
+        "refund": {
+          "tp": 68,
+          "fp": 1,
+          "fn": 0,
+          "precision": 0.9855,
+          "recall": 1.0,
+          "f1": 0.9927
+        },
+        "penalty": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9828,
+          "f1": 0.9913
+        },
+        "auto_renewal": {
+          "tp": 58,
+          "fp": 0,
+          "fn": 2,
+          "precision": 1.0,
+          "recall": 0.9667,
+          "f1": 0.9831
+        },
+        "service_term": {
+          "tp": 57,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9828,
+          "f1": 0.9913
+        },
+        "extra_fee": {
+          "tp": 56,
+          "fp": 0,
+          "fn": 4,
+          "precision": 1.0,
+          "recall": 0.9333,
+          "f1": 0.9655
+        }
+      }
+    },
+    "matching": {
+      "accuracy": 0.956,
+      "macro_f1_6": 0.9409,
+      "macro_f1_3": 0.9547,
+      "by_label": {
+        "consistent": {
+          "tp": 52,
+          "fp": 0,
+          "fn": 5,
+          "precision": 1.0,
+          "recall": 0.9123,
+          "f1": 0.9541
+        },
+        "conflict": {
+          "tp": 48,
+          "fp": 1,
+          "fn": 5,
+          "precision": 0.9796,
+          "recall": 0.9057,
+          "f1": 0.9412
+        },
+        "missing_in_contract": {
+          "tp": 34,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "missing_in_promo": {
+          "tp": 34,
+          "fp": 5,
+          "fn": 0,
+          "precision": 0.8718,
+          "recall": 1.0,
+          "f1": 0.9315
+        },
+        "missing_both": {
+          "tp": 63,
+          "fp": 2,
+          "fn": 1,
+          "precision": 0.9692,
+          "recall": 0.9844,
+          "f1": 0.9767
+        },
+        "unclear": {
+          "tp": 8,
+          "fp": 3,
+          "fn": 0,
+          "precision": 0.7273,
+          "recall": 1.0,
+          "f1": 0.8421
+        }
+      },
+      "by_group": {
+        "consistent": {
+          "tp": 52,
+          "fp": 0,
+          "fn": 5,
+          "precision": 1.0,
+          "recall": 0.9123,
+          "f1": 0.9541
+        },
+        "conflict": {
+          "tp": 48,
+          "fp": 1,
+          "fn": 5,
+          "precision": 0.9796,
+          "recall": 0.9057,
+          "f1": 0.9412
+        },
+        "insufficient": {
+          "tp": 140,
+          "fp": 9,
+          "fn": 0,
+          "precision": 0.9396,
+          "recall": 1.0,
+          "f1": 0.9689
+        }
+      },
+      "confusion": {
+        "consistent": {
+          "consistent": 52,
+          "conflict": 1,
+          "missing_in_contract": 0,
+          "missing_in_promo": 1,
+          "missing_both": 1,
+          "unclear": 2
+        },
+        "conflict": {
+          "consistent": 0,
+          "conflict": 48,
+          "missing_in_contract": 0,
+          "missing_in_promo": 3,
+          "missing_both": 1,
+          "unclear": 1
+        },
+        "missing_in_contract": {
+          "consistent": 0,
+          "conflict": 0,
+          "missing_in_contract": 34,
+          "missing_in_promo": 0,
+          "missing_both": 0,
+          "unclear": 0
+        },
+        "missing_in_promo": {
+          "consistent": 0,
+          "conflict": 0,
+          "missing_in_contract": 0,
+          "missing_in_promo": 34,
+          "missing_both": 0,
+          "unclear": 0
+        },
+        "missing_both": {
+          "consistent": 0,
+          "conflict": 0,
+          "missing_in_contract": 0,
+          "missing_in_promo": 1,
+          "missing_both": 63,
+          "unclear": 0
+        },
+        "unclear": {
+          "consistent": 0,
+          "conflict": 0,
+          "missing_in_contract": 0,
+          "missing_in_promo": 0,
+          "missing_both": 0,
+          "unclear": 8
+        }
+      },
+      "errors": [
+        {
+          "case": "para_001",
+          "split": "paraphrase",
+          "clause_type": "refund",
+          "clause_label": "退款",
+          "gold": "consistent",
+          "predicted": "unclear"
+        },
+        {
+          "case": "para_002",
+          "split": "paraphrase",
+          "clause_type": "extra_fee",
+          "clause_label": "额外收费",
+          "gold": "conflict",
+          "predicted": "missing_both"
+        },
+        {
+          "case": "para_003",
+          "split": "paraphrase",
+          "clause_type": "auto_renewal",
+          "clause_label": "自动续费/续租",
+          "gold": "consistent",
+          "predicted": "missing_in_promo"
+        },
+        {
+          "case": "para_004",
+          "split": "paraphrase",
+          "clause_type": "penalty",
+          "clause_label": "违约金",
+          "gold": "conflict",
+          "predicted": "missing_in_promo"
+        },
+        {
+          "case": "para_005",
+          "split": "paraphrase",
+          "clause_type": "service_term",
+          "clause_label": "服务期限",
+          "gold": "consistent",
+          "predicted": "conflict"
+        },
+        {
+          "case": "para_006",
+          "split": "paraphrase",
+          "clause_type": "refund",
+          "clause_label": "退款",
+          "gold": "consistent",
+          "predicted": "unclear"
+        },
+        {
+          "case": "para_007",
+          "split": "paraphrase",
+          "clause_type": "service_term",
+          "clause_label": "服务期限",
+          "gold": "conflict",
+          "predicted": "missing_in_promo"
+        },
+        {
+          "case": "para_008",
+          "split": "paraphrase",
+          "clause_type": "auto_renewal",
+          "clause_label": "自动续费/续租",
+          "gold": "conflict",
+          "predicted": "missing_in_promo"
+        },
+        {
+          "case": "para_009",
+          "split": "paraphrase",
+          "clause_type": "extra_fee",
+          "clause_label": "额外收费",
+          "gold": "consistent",
+          "predicted": "missing_both"
+        },
+        {
+          "case": "para_010",
+          "split": "paraphrase",
+          "clause_type": "refund",
+          "clause_label": "退款",
+          "gold": "missing_both",
+          "predicted": "missing_in_promo"
+        },
+        {
+          "case": "para_010",
+          "split": "paraphrase",
+          "clause_type": "penalty",
+          "clause_label": "违约金",
+          "gold": "conflict",
+          "predicted": "unclear"
+        }
+      ],
+      "error_count": 11
+    },
+    "evidence": {
+      "correct": 296,
+      "total": 304,
+      "accuracy": 0.9737,
+      "by_clause_type": {
+        "refund": {
+          "correct": 68,
+          "total": 68,
+          "accuracy": 1.0
+        },
+        "penalty": {
+          "correct": 57,
+          "total": 58,
+          "accuracy": 0.9828
+        },
+        "auto_renewal": {
+          "correct": 58,
+          "total": 60,
+          "accuracy": 0.9667
+        },
+        "service_term": {
+          "correct": 57,
+          "total": 58,
+          "accuracy": 0.9828
+        },
+        "extra_fee": {
+          "correct": 56,
+          "total": 60,
+          "accuracy": 0.9333
+        }
+      }
+    },
+    "cases": [
+      {
+        "id": "case_001",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_002",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_003",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_004",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_005",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_006",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_007",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_008",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_009",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        }
+      },
+      {
+        "id": "case_010",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_011",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_012",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_013",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_014",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_015",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_016",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_017",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal"
+          ]
+        }
+      },
+      {
+        "id": "case_018",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_019",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_020",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_021",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_022",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_023",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_024",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_025",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_026",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_027",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee"
+          ]
+        }
+      },
+      {
+        "id": "case_028",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_029",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        }
+      },
+      {
+        "id": "case_030",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_031",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_032",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_033",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_034",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_035",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "case_036",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_037",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_038",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "case_039",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "service_term"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        }
+      },
+      {
+        "id": "case_040",
+        "split": "template",
+        "match_errors": [],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "extra_fee",
+            "refund"
+          ],
+          "contract": [
+            "auto_renewal",
+            "extra_fee",
+            "penalty",
+            "refund",
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "para_001",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "consistent",
+            "predicted": "unclear"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "para_002",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "extra_fee",
+            "clause_label": "额外收费",
+            "gold": "conflict",
+            "predicted": "missing_both"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": []
+        }
+      },
+      {
+        "id": "para_003",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "auto_renewal",
+            "clause_label": "自动续费/续租",
+            "gold": "consistent",
+            "predicted": "missing_in_promo"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal"
+          ],
+          "contract": [
+            "auto_renewal"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": [
+            "auto_renewal"
+          ]
+        }
+      },
+      {
+        "id": "para_004",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "penalty",
+            "clause_label": "违约金",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "penalty"
+          ],
+          "contract": [
+            "penalty"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": [
+            "penalty"
+          ]
+        }
+      },
+      {
+        "id": "para_005",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "service_term",
+            "clause_label": "服务期限",
+            "gold": "consistent",
+            "predicted": "conflict"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "service_term"
+          ],
+          "contract": [
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "service_term"
+          ],
+          "contract": [
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "para_006",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "consistent",
+            "predicted": "unclear"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "refund"
+          ],
+          "contract": [
+            "refund"
+          ]
+        }
+      },
+      {
+        "id": "para_007",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "service_term",
+            "clause_label": "服务期限",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "service_term"
+          ],
+          "contract": [
+            "service_term"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": [
+            "service_term"
+          ]
+        }
+      },
+      {
+        "id": "para_008",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "auto_renewal",
+            "clause_label": "自动续费/续租",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "auto_renewal"
+          ],
+          "contract": [
+            "auto_renewal"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": [
+            "auto_renewal"
+          ]
+        }
+      },
+      {
+        "id": "para_009",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "extra_fee",
+            "clause_label": "额外收费",
+            "gold": "consistent",
+            "predicted": "missing_both"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [],
+          "contract": []
+        }
+      },
+      {
+        "id": "para_010",
+        "split": "paraphrase",
+        "match_errors": [
+          {
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "missing_both",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "clause_type": "penalty",
+            "clause_label": "违约金",
+            "gold": "conflict",
+            "predicted": "unclear"
+          }
+        ],
+        "extraction_gold": {
+          "promo": [
+            "penalty"
+          ],
+          "contract": [
+            "penalty"
+          ]
+        },
+        "extraction_predicted": {
+          "promo": [
+            "penalty"
+          ],
+          "contract": [
+            "penalty",
+            "refund"
+          ]
+        }
+      }
+    ]
+  },
+  "by_split": {
+    "template": {
+      "case_count": 40,
+      "extraction": {
+        "overall": {
+          "tp": 284,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "macro_f1": 1.0,
+          "documents": 80
+        },
+        "by_clause_type": {
+          "refund": {
+            "tp": 64,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "penalty": {
+            "tp": 54,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "auto_renewal": {
+            "tp": 56,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "service_term": {
+            "tp": 54,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "extra_fee": {
+            "tp": 56,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          }
+        }
+      },
+      "matching": {
+        "accuracy": 1.0,
+        "macro_f1_6": 1.0,
+        "macro_f1_3": 1.0,
+        "by_label": {
+          "consistent": {
+            "tp": 52,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "conflict": {
+            "tp": 48,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "missing_in_contract": {
+            "tp": 34,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "missing_in_promo": {
+            "tp": 34,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "missing_both": {
+            "tp": 24,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "unclear": {
+            "tp": 8,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          }
+        },
+        "by_group": {
+          "consistent": {
+            "tp": 52,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "conflict": {
+            "tp": 48,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "insufficient": {
+            "tp": 100,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          }
+        },
+        "confusion": {
+          "consistent": {
+            "consistent": 52,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "conflict": {
+            "consistent": 0,
+            "conflict": 48,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "missing_in_contract": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 34,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "missing_in_promo": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 34,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "missing_both": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 24,
+            "unclear": 0
+          },
+          "unclear": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 8
+          }
+        },
+        "errors": [],
+        "error_count": 0
+      },
+      "evidence": {
+        "correct": 284,
+        "total": 284,
+        "accuracy": 1.0,
+        "by_clause_type": {
+          "refund": {
+            "correct": 64,
+            "total": 64,
+            "accuracy": 1.0
+          },
+          "penalty": {
+            "correct": 54,
+            "total": 54,
+            "accuracy": 1.0
+          },
+          "auto_renewal": {
+            "correct": 56,
+            "total": 56,
+            "accuracy": 1.0
+          },
+          "service_term": {
+            "correct": 54,
+            "total": 54,
+            "accuracy": 1.0
+          },
+          "extra_fee": {
+            "correct": 56,
+            "total": 56,
+            "accuracy": 1.0
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "case_001",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_002",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_003",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_004",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_005",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_006",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_007",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_008",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_009",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          }
+        },
+        {
+          "id": "case_010",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_011",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_012",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_013",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_014",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_015",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_016",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_017",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal"
+            ]
+          }
+        },
+        {
+          "id": "case_018",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_019",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_020",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_021",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_022",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_023",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_024",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_025",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_026",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_027",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee"
+            ]
+          }
+        },
+        {
+          "id": "case_028",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_029",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          }
+        },
+        {
+          "id": "case_030",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_031",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_032",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_033",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_034",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_035",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "case_036",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_037",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_038",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "case_039",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "service_term"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          }
+        },
+        {
+          "id": "case_040",
+          "split": "template",
+          "match_errors": [],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "extra_fee",
+              "refund"
+            ],
+            "contract": [
+              "auto_renewal",
+              "extra_fee",
+              "penalty",
+              "refund",
+              "service_term"
+            ]
+          }
+        }
+      ]
+    },
+    "paraphrase": {
+      "case_count": 10,
+      "extraction": {
+        "overall": {
+          "tp": 12,
+          "fp": 1,
+          "fn": 8,
+          "precision": 0.9231,
+          "recall": 0.6,
+          "f1": 0.7273,
+          "macro_f1": 0.654,
+          "documents": 20
+        },
+        "by_clause_type": {
+          "refund": {
+            "tp": 4,
+            "fp": 1,
+            "fn": 0,
+            "precision": 0.8,
+            "recall": 1.0,
+            "f1": 0.8889
+          },
+          "penalty": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571
+          },
+          "auto_renewal": {
+            "tp": 2,
+            "fp": 0,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.5,
+            "f1": 0.6667
+          },
+          "service_term": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.75,
+            "f1": 0.8571
+          },
+          "extra_fee": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        }
+      },
+      "matching": {
+        "accuracy": 0.78,
+        "macro_f1_6": 0.321,
+        "macro_f1_3": 0.2996,
+        "by_label": {
+          "consistent": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "conflict": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "missing_in_contract": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "missing_in_promo": {
+            "tp": 0,
+            "fp": 5,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "missing_both": {
+            "tp": 39,
+            "fp": 2,
+            "fn": 1,
+            "precision": 0.9512,
+            "recall": 0.975,
+            "f1": 0.963
+          },
+          "unclear": {
+            "tp": 0,
+            "fp": 3,
+            "fn": 0,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        },
+        "by_group": {
+          "consistent": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "conflict": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "insufficient": {
+            "tp": 40,
+            "fp": 9,
+            "fn": 0,
+            "precision": 0.8163,
+            "recall": 1.0,
+            "f1": 0.8989
+          }
+        },
+        "confusion": {
+          "consistent": {
+            "consistent": 0,
+            "conflict": 1,
+            "missing_in_contract": 0,
+            "missing_in_promo": 1,
+            "missing_both": 1,
+            "unclear": 2
+          },
+          "conflict": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 3,
+            "missing_both": 1,
+            "unclear": 1
+          },
+          "missing_in_contract": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "missing_in_promo": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          },
+          "missing_both": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 1,
+            "missing_both": 39,
+            "unclear": 0
+          },
+          "unclear": {
+            "consistent": 0,
+            "conflict": 0,
+            "missing_in_contract": 0,
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
+          }
+        },
+        "errors": [
+          {
+            "case": "para_001",
+            "split": "paraphrase",
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "consistent",
+            "predicted": "unclear"
+          },
+          {
+            "case": "para_002",
+            "split": "paraphrase",
+            "clause_type": "extra_fee",
+            "clause_label": "额外收费",
+            "gold": "conflict",
+            "predicted": "missing_both"
+          },
+          {
+            "case": "para_003",
+            "split": "paraphrase",
+            "clause_type": "auto_renewal",
+            "clause_label": "自动续费/续租",
+            "gold": "consistent",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "case": "para_004",
+            "split": "paraphrase",
+            "clause_type": "penalty",
+            "clause_label": "违约金",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "case": "para_005",
+            "split": "paraphrase",
+            "clause_type": "service_term",
+            "clause_label": "服务期限",
+            "gold": "consistent",
+            "predicted": "conflict"
+          },
+          {
+            "case": "para_006",
+            "split": "paraphrase",
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "consistent",
+            "predicted": "unclear"
+          },
+          {
+            "case": "para_007",
+            "split": "paraphrase",
+            "clause_type": "service_term",
+            "clause_label": "服务期限",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "case": "para_008",
+            "split": "paraphrase",
+            "clause_type": "auto_renewal",
+            "clause_label": "自动续费/续租",
+            "gold": "conflict",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "case": "para_009",
+            "split": "paraphrase",
+            "clause_type": "extra_fee",
+            "clause_label": "额外收费",
+            "gold": "consistent",
+            "predicted": "missing_both"
+          },
+          {
+            "case": "para_010",
+            "split": "paraphrase",
+            "clause_type": "refund",
+            "clause_label": "退款",
+            "gold": "missing_both",
+            "predicted": "missing_in_promo"
+          },
+          {
+            "case": "para_010",
+            "split": "paraphrase",
+            "clause_type": "penalty",
+            "clause_label": "违约金",
+            "gold": "conflict",
+            "predicted": "unclear"
+          }
+        ],
+        "error_count": 11
+      },
+      "evidence": {
+        "correct": 12,
+        "total": 20,
+        "accuracy": 0.6,
+        "by_clause_type": {
+          "refund": {
+            "correct": 4,
+            "total": 4,
+            "accuracy": 1.0
+          },
+          "penalty": {
+            "correct": 3,
+            "total": 4,
+            "accuracy": 0.75
+          },
+          "auto_renewal": {
+            "correct": 2,
+            "total": 4,
+            "accuracy": 0.5
+          },
+          "service_term": {
+            "correct": 3,
+            "total": 4,
+            "accuracy": 0.75
+          },
+          "extra_fee": {
+            "correct": 0,
+            "total": 4,
+            "accuracy": 0.0
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "para_001",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "refund",
+              "clause_label": "退款",
+              "gold": "consistent",
+              "predicted": "unclear"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "para_002",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "extra_fee",
+              "clause_label": "额外收费",
+              "gold": "conflict",
+              "predicted": "missing_both"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": []
+          }
+        },
+        {
+          "id": "para_003",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "auto_renewal",
+              "clause_label": "自动续费/续租",
+              "gold": "consistent",
+              "predicted": "missing_in_promo"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal"
+            ],
+            "contract": [
+              "auto_renewal"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": [
+              "auto_renewal"
+            ]
+          }
+        },
+        {
+          "id": "para_004",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "penalty",
+              "clause_label": "违约金",
+              "gold": "conflict",
+              "predicted": "missing_in_promo"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "penalty"
+            ],
+            "contract": [
+              "penalty"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": [
+              "penalty"
+            ]
+          }
+        },
+        {
+          "id": "para_005",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "service_term",
+              "clause_label": "服务期限",
+              "gold": "consistent",
+              "predicted": "conflict"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "service_term"
+            ],
+            "contract": [
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "service_term"
+            ],
+            "contract": [
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "para_006",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "refund",
+              "clause_label": "退款",
+              "gold": "consistent",
+              "predicted": "unclear"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "refund"
+            ],
+            "contract": [
+              "refund"
+            ]
+          }
+        },
+        {
+          "id": "para_007",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "service_term",
+              "clause_label": "服务期限",
+              "gold": "conflict",
+              "predicted": "missing_in_promo"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "service_term"
+            ],
+            "contract": [
+              "service_term"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": [
+              "service_term"
+            ]
+          }
+        },
+        {
+          "id": "para_008",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "auto_renewal",
+              "clause_label": "自动续费/续租",
+              "gold": "conflict",
+              "predicted": "missing_in_promo"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "auto_renewal"
+            ],
+            "contract": [
+              "auto_renewal"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": [
+              "auto_renewal"
+            ]
+          }
+        },
+        {
+          "id": "para_009",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "extra_fee",
+              "clause_label": "额外收费",
+              "gold": "consistent",
+              "predicted": "missing_both"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [],
+            "contract": []
+          }
+        },
+        {
+          "id": "para_010",
+          "split": "paraphrase",
+          "match_errors": [
+            {
+              "clause_type": "refund",
+              "clause_label": "退款",
+              "gold": "missing_both",
+              "predicted": "missing_in_promo"
+            },
+            {
+              "clause_type": "penalty",
+              "clause_label": "违约金",
+              "gold": "conflict",
+              "predicted": "unclear"
+            }
+          ],
+          "extraction_gold": {
+            "promo": [
+              "penalty"
+            ],
+            "contract": [
+              "penalty"
+            ]
+          },
+          "extraction_predicted": {
+            "promo": [
+              "penalty"
+            ],
+            "contract": [
+              "penalty",
+              "refund"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

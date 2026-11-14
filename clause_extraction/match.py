@@ -91,8 +91,17 @@ def _format_per_unit(items: List[Dict[str, Any]]) -> str:
     return '、'.join(f"{item['amount']:g} 元/{item['unit']}" for item in items)
 
 
+def _value_key(item: Any) -> Any:
+    """把 dict/list 字段转成可哈希键，避免 set(dict) 报错。"""
+    if isinstance(item, dict):
+        return tuple(sorted((str(key), _value_key(value)) for key, value in item.items()))
+    if isinstance(item, (list, tuple)):
+        return tuple(_value_key(value) for value in item)
+    return item
+
+
 def _values_conflict(left: List[Any], right: List[Any]) -> bool:
-    return bool(left) and bool(right) and set(left) != set(right)
+    return bool(left) and bool(right) and {_value_key(x) for x in left} != {_value_key(x) for x in right}
 
 
 def _match_refund(
