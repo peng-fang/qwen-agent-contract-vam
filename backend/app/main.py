@@ -8,7 +8,10 @@
 """
 
 from pathlib import Path
+import os
+import threading
 
+import requests
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -19,6 +22,44 @@ from app.routers import checklist
 from app.schemas import HealthResponse
 
 app = FastAPI(title='签之前 API', version='0.1.0')
+
+
+def _warm_ollama_models() -> None:
+    if os.getenv('MODEL_PRELOAD', '1').strip().lower() in {'0', 'false', 'no'}:
+        return
+    base = os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434/v1').rstrip('/')
+    if base.endswith('/v1'):
+        base = base[:-3]
+    models = []
+    for name in (
+        os.getenv('OLLAMA_MODEL', 'qwen2.5:7b'),
+        os.getenv('ANALYZE_MODEL', ''),
+        os.getenv('JUDGE_MODEL', ''),
+    ):
+        name = (name or '').strip()
+        if name and name not in models:
+            models.append(name)
+    for model in models:
+        try:
+            requests.post(
+                f'{base}/api/generate',
+                json={
+                    'model': model,
+                    'prompt': 'ping',
+                    'stream': False,
+                    'keep_alive': os.getenv('MODEL_PRELOAD_KEEP_ALIVE', '30m'),
+                    'options': {'num_predict': 1},
+                },
+                timeout=90,
+            )
+        except Exception:
+            # 预热失败不影响服务启动，首次请求会自行加载
+            pass
+
+
+@app.on_event('startup')
+def warm_models_on_startup() -> None:
+    threading.Thread(target=_warm_ollama_models, name='model-preload', daemon=True).start()
 
 app.add_middleware(
     CORSMiddleware,

@@ -19,6 +19,7 @@ demo_data/ui_lease_money.png
 demo_data/vam_report_*.md
 backend/uploads/
 backend/workspace/
+backend/cache/
 intern_service/.venv/
 intern_service/models/
 
