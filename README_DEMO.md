@@ -102,9 +102,8 @@ npm run dev
 
 | 场景 | 行为 |
 | --- | --- |
-| 没有 Ollama / DashScope | 条款对照、风险评分、证据复核、评测全部可用；依赖模型的页面给出可读的服务不可用提示，不会白屏 |
+| 没有 Ollama / DashScope，或评分服务不可用 | 条款对照、风险评分、证据复核、评测全部可用；依赖模型的接口不使用多级回退，返回 502 与中文提示（如“模型暂时未能生成可用情景，请检查模型服务后重试”），页面显示可读错误，不白屏 |
 | 后端停止、只托管前端静态文件 | 对照页给出「无法连接条款对照服务…请确认后端已在 8001 端口启动」的可读提示，控制台无未捕获异常 |
-| 评分 sidecar 停止 | VAM 后端接口回退外部评分 API → 本地模型，结果中标注回退原因；三者都不可用时给出可读错误 |
 
 > 开发模式下 Vite 会把 `/api` 代理到 `127.0.0.1:8001`；生产/离线模式下由 FastAPI 直接托管 `frontend/dist`。
 
@@ -126,7 +125,6 @@ frontend/
     VersionComparePage.tsx    # 合同版本对比
     ChecklistPage.tsx         # 签约前必问清单
     ChecklistEstimate.tsx     # 清单条件金额试算
-    VamInputs.tsx / VamResults.tsx  # 清单页复用的问题卡与结果展示
     CashflowPage.tsx          # ECharts 资金流（演示数据）
     PdfViewer.tsx
     EvidenceDrawer.tsx

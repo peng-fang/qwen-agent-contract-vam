@@ -4,7 +4,7 @@
 1. 文档、页码、字符区间是否存在；
 2. 原文切片是否与 evidence.quote 逐字一致；
 3. 从 quote 重新抽取的字段是否与返回给前端的字段一致；
-4. evidence_id 是否与文档/页码/区间自洽。
+4. evidence_id 是否带 `ev-` 前缀；ID 的完整解析与反查由 registry 负责。
 """
 
 from __future__ import annotations

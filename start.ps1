@@ -7,7 +7,7 @@
 #   .\start.ps1 -Rebuild        # 先重新 npm run build
 #
 # 依赖：Python 3.10+（需 fastapi / uvicorn / qwen_agent），前端 dist 已提交到完整包。
-# 不依赖 Ollama/DashScope；没有模型时条款对照、风险评分、评测仍可用，推演会给出可读提示。
+# 不依赖 Ollama/DashScope；没有模型时条款对照、风险评分、评测仍可用，依赖模型的接口会返回可读提示。
 
 param(
     [int]$Port = 8001,
@@ -29,15 +29,14 @@ function Fail($Message) {
 
 Write-Host '== 签之前 · 本地一键启动 ==' -ForegroundColor Cyan
 
-# 1) 找 Python：优先项目内 venv，其次 py -3.12 / python
+# 1) 找 Python：优先本包内 venv，其次 py -3.12 / python
 $PyExe = $null
 $PyPrefix = @()
 $candidates = @(
     $Python,
     $env:PYTHON,
     (Join-Path $Root '.venv\Scripts\python.exe'),
-    (Join-Path $Root '..\.venv312\Scripts\python.exe'),
-    (Join-Path $Root '..\venv\Scripts\python.exe')
+    (Join-Path $Root 'venv\Scripts\python.exe')
 )
 foreach ($candidate in $candidates) {
     if ($candidate -and (Test-Path $candidate)) {
@@ -67,7 +66,7 @@ if (-not $PyExe) {
 $probe = if ($PyExe -eq 'py') { & py -3.12 -c 'import fastapi, uvicorn, qwen_agent' 2>&1 } else { & $PyExe -c 'import fastapi, uvicorn, qwen_agent' 2>&1 }
 if ($LASTEXITCODE -ne 0) {
     Write-Host $probe
-    Fail "当前 Python 缺少依赖。请执行：`n  $PyExe -m pip install -r backend\requirements.txt`n  $PyExe -m pip install -e .`n或使用完整包内已配好的虚拟环境。"
+    Fail "当前 Python 缺少依赖。请在本包根目录执行：`n  $PyExe -m pip install -r requirements.txt`n或使用本包内已配好的虚拟环境。"
 }
 Write-Host "Python: $PyExe $($PyPrefix -join ' ')" -ForegroundColor DarkGray
 
