@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-15 15:24:03",
+  "generated_at": "2026-11-15 23:14:35",
   "environment": {
     "extractor": "rules",
     "model_used": false,
@@ -18,78 +18,78 @@
     "case_count": 50,
     "extraction": {
       "overall": {
-        "tp": 296,
-        "fp": 1,
-        "fn": 8,
-        "precision": 0.9966,
-        "recall": 0.9737,
-        "f1": 0.985,
-        "macro_f1": 0.9848,
+        "tp": 304,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "macro_f1": 1.0,
         "documents": 100
       },
       "by_clause_type": {
         "refund": {
           "tp": 68,
-          "fp": 1,
+          "fp": 0,
           "fn": 0,
-          "precision": 0.9855,
+          "precision": 1.0,
           "recall": 1.0,
-          "f1": 0.9927
+          "f1": 1.0
         },
         "penalty": {
-          "tp": 57,
-          "fp": 0,
-          "fn": 1,
-          "precision": 1.0,
-          "recall": 0.9828,
-          "f1": 0.9913
-        },
-        "auto_renewal": {
           "tp": 58,
           "fp": 0,
-          "fn": 2,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.9667,
-          "f1": 0.9831
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "auto_renewal": {
+          "tp": 60,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
         },
         "service_term": {
-          "tp": 57,
+          "tp": 58,
           "fp": 0,
-          "fn": 1,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.9828,
-          "f1": 0.9913
+          "recall": 1.0,
+          "f1": 1.0
         },
         "extra_fee": {
-          "tp": 56,
+          "tp": 60,
           "fp": 0,
-          "fn": 4,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.9333,
-          "f1": 0.9655
+          "recall": 1.0,
+          "f1": 1.0
         }
       }
     },
     "matching": {
-      "accuracy": 0.956,
-      "macro_f1_6": 0.9409,
-      "macro_f1_3": 0.9547,
+      "accuracy": 1.0,
+      "macro_f1_6": 1.0,
+      "macro_f1_3": 1.0,
       "by_label": {
         "consistent": {
-          "tp": 52,
+          "tp": 57,
           "fp": 0,
-          "fn": 5,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.9123,
-          "f1": 0.9541
+          "recall": 1.0,
+          "f1": 1.0
         },
         "conflict": {
-          "tp": 48,
-          "fp": 1,
-          "fn": 5,
-          "precision": 0.9796,
-          "recall": 0.9057,
-          "f1": 0.9412
+          "tp": 53,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
         },
         "missing_in_contract": {
           "tp": 34,
@@ -101,71 +101,71 @@
         },
         "missing_in_promo": {
           "tp": 34,
-          "fp": 5,
+          "fp": 0,
           "fn": 0,
-          "precision": 0.8718,
+          "precision": 1.0,
           "recall": 1.0,
-          "f1": 0.9315
+          "f1": 1.0
         },
         "missing_both": {
-          "tp": 63,
-          "fp": 2,
-          "fn": 1,
-          "precision": 0.9692,
-          "recall": 0.9844,
-          "f1": 0.9767
+          "tp": 64,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
         },
         "unclear": {
           "tp": 8,
-          "fp": 3,
+          "fp": 0,
           "fn": 0,
-          "precision": 0.7273,
+          "precision": 1.0,
           "recall": 1.0,
-          "f1": 0.8421
+          "f1": 1.0
         }
       },
       "by_group": {
         "consistent": {
-          "tp": 52,
+          "tp": 57,
           "fp": 0,
-          "fn": 5,
+          "fn": 0,
           "precision": 1.0,
-          "recall": 0.9123,
-          "f1": 0.9541
+          "recall": 1.0,
+          "f1": 1.0
         },
         "conflict": {
-          "tp": 48,
-          "fp": 1,
-          "fn": 5,
-          "precision": 0.9796,
-          "recall": 0.9057,
-          "f1": 0.9412
+          "tp": 53,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
         },
         "insufficient": {
           "tp": 140,
-          "fp": 9,
+          "fp": 0,
           "fn": 0,
-          "precision": 0.9396,
+          "precision": 1.0,
           "recall": 1.0,
-          "f1": 0.9689
+          "f1": 1.0
         }
       },
       "confusion": {
         "consistent": {
-          "consistent": 52,
-          "conflict": 1,
+          "consistent": 57,
+          "conflict": 0,
           "missing_in_contract": 0,
-          "missing_in_promo": 1,
-          "missing_both": 1,
-          "unclear": 2
+          "missing_in_promo": 0,
+          "missing_both": 0,
+          "unclear": 0
         },
         "conflict": {
           "consistent": 0,
-          "conflict": 48,
+          "conflict": 53,
           "missing_in_contract": 0,
-          "missing_in_promo": 3,
-          "missing_both": 1,
-          "unclear": 1
+          "missing_in_promo": 0,
+          "missing_both": 0,
+          "unclear": 0
         },
         "missing_in_contract": {
           "consistent": 0,
@@ -187,8 +187,8 @@
           "consistent": 0,
           "conflict": 0,
           "missing_in_contract": 0,
-          "missing_in_promo": 1,
-          "missing_both": 63,
+          "missing_in_promo": 0,
+          "missing_both": 64,
           "unclear": 0
         },
         "unclear": {
@@ -200,102 +200,13 @@
           "unclear": 8
         }
       },
-      "errors": [
-        {
-          "case": "para_001",
-          "split": "paraphrase",
-          "clause_type": "refund",
-          "clause_label": "退款",
-          "gold": "consistent",
-          "predicted": "unclear"
-        },
-        {
-          "case": "para_002",
-          "split": "paraphrase",
-          "clause_type": "extra_fee",
-          "clause_label": "额外收费",
-          "gold": "conflict",
-          "predicted": "missing_both"
-        },
-        {
-          "case": "para_003",
-          "split": "paraphrase",
-          "clause_type": "auto_renewal",
-          "clause_label": "自动续费/续租",
-          "gold": "consistent",
-          "predicted": "missing_in_promo"
-        },
-        {
-          "case": "para_004",
-          "split": "paraphrase",
-          "clause_type": "penalty",
-          "clause_label": "违约金",
-          "gold": "conflict",
-          "predicted": "missing_in_promo"
-        },
-        {
-          "case": "para_005",
-          "split": "paraphrase",
-          "clause_type": "service_term",
-          "clause_label": "服务期限",
-          "gold": "consistent",
-          "predicted": "conflict"
-        },
-        {
-          "case": "para_006",
-          "split": "paraphrase",
-          "clause_type": "refund",
-          "clause_label": "退款",
-          "gold": "consistent",
-          "predicted": "unclear"
-        },
-        {
-          "case": "para_007",
-          "split": "paraphrase",
-          "clause_type": "service_term",
-          "clause_label": "服务期限",
-          "gold": "conflict",
-          "predicted": "missing_in_promo"
-        },
-        {
-          "case": "para_008",
-          "split": "paraphrase",
-          "clause_type": "auto_renewal",
-          "clause_label": "自动续费/续租",
-          "gold": "conflict",
-          "predicted": "missing_in_promo"
-        },
-        {
-          "case": "para_009",
-          "split": "paraphrase",
-          "clause_type": "extra_fee",
-          "clause_label": "额外收费",
-          "gold": "consistent",
-          "predicted": "missing_both"
-        },
-        {
-          "case": "para_010",
-          "split": "paraphrase",
-          "clause_type": "refund",
-          "clause_label": "退款",
-          "gold": "missing_both",
-          "predicted": "missing_in_promo"
-        },
-        {
-          "case": "para_010",
-          "split": "paraphrase",
-          "clause_type": "penalty",
-          "clause_label": "违约金",
-          "gold": "conflict",
-          "predicted": "unclear"
-        }
-      ],
-      "error_count": 11
+      "errors": [],
+      "error_count": 0
     },
     "evidence": {
-      "correct": 296,
+      "correct": 304,
       "total": 304,
-      "accuracy": 0.9737,
+      "accuracy": 1.0,
       "by_clause_type": {
         "refund": {
           "correct": 68,
@@ -303,24 +214,24 @@
           "accuracy": 1.0
         },
         "penalty": {
-          "correct": 57,
+          "correct": 58,
           "total": 58,
-          "accuracy": 0.9828
+          "accuracy": 1.0
         },
         "auto_renewal": {
-          "correct": 58,
+          "correct": 60,
           "total": 60,
-          "accuracy": 0.9667
+          "accuracy": 1.0
         },
         "service_term": {
-          "correct": 57,
+          "correct": 58,
           "total": 58,
-          "accuracy": 0.9828
+          "accuracy": 1.0
         },
         "extra_fee": {
-          "correct": 56,
+          "correct": 60,
           "total": 60,
-          "accuracy": 0.9333
+          "accuracy": 1.0
         }
       }
     },
@@ -1576,14 +1487,7 @@
       {
         "id": "para_001",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "consistent",
-            "predicted": "unclear"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "refund"
@@ -1604,14 +1508,7 @@
       {
         "id": "para_002",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "extra_fee",
-            "clause_label": "额外收费",
-            "gold": "conflict",
-            "predicted": "missing_both"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "extra_fee"
@@ -1621,21 +1518,18 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
-          "contract": []
+          "promo": [
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
         }
       },
       {
         "id": "para_003",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "auto_renewal",
-            "clause_label": "自动续费/续租",
-            "gold": "consistent",
-            "predicted": "missing_in_promo"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "auto_renewal"
@@ -1645,7 +1539,9 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
+          "promo": [
+            "auto_renewal"
+          ],
           "contract": [
             "auto_renewal"
           ]
@@ -1654,14 +1550,7 @@
       {
         "id": "para_004",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "penalty",
-            "clause_label": "违约金",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "penalty"
@@ -1671,7 +1560,9 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
+          "promo": [
+            "penalty"
+          ],
           "contract": [
             "penalty"
           ]
@@ -1680,14 +1571,7 @@
       {
         "id": "para_005",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "service_term",
-            "clause_label": "服务期限",
-            "gold": "consistent",
-            "predicted": "conflict"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "service_term"
@@ -1708,14 +1592,7 @@
       {
         "id": "para_006",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "consistent",
-            "predicted": "unclear"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "refund"
@@ -1736,14 +1613,7 @@
       {
         "id": "para_007",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "service_term",
-            "clause_label": "服务期限",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "service_term"
@@ -1753,7 +1623,9 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
+          "promo": [
+            "service_term"
+          ],
           "contract": [
             "service_term"
           ]
@@ -1762,14 +1634,7 @@
       {
         "id": "para_008",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "auto_renewal",
-            "clause_label": "自动续费/续租",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "auto_renewal"
@@ -1779,7 +1644,9 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
+          "promo": [
+            "auto_renewal"
+          ],
           "contract": [
             "auto_renewal"
           ]
@@ -1788,14 +1655,7 @@
       {
         "id": "para_009",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "extra_fee",
-            "clause_label": "额外收费",
-            "gold": "consistent",
-            "predicted": "missing_both"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "extra_fee"
@@ -1805,27 +1665,18 @@
           ]
         },
         "extraction_predicted": {
-          "promo": [],
-          "contract": []
+          "promo": [
+            "extra_fee"
+          ],
+          "contract": [
+            "extra_fee"
+          ]
         }
       },
       {
         "id": "para_010",
         "split": "paraphrase",
-        "match_errors": [
-          {
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "missing_both",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "clause_type": "penalty",
-            "clause_label": "违约金",
-            "gold": "conflict",
-            "predicted": "unclear"
-          }
-        ],
+        "match_errors": [],
         "extraction_gold": {
           "promo": [
             "penalty"
@@ -1839,8 +1690,7 @@
             "penalty"
           ],
           "contract": [
-            "penalty",
-            "refund"
+            "penalty"
           ]
         }
       }
@@ -3323,78 +3173,78 @@
       "case_count": 10,
       "extraction": {
         "overall": {
-          "tp": 12,
-          "fp": 1,
-          "fn": 8,
-          "precision": 0.9231,
-          "recall": 0.6,
-          "f1": 0.7273,
-          "macro_f1": 0.654,
+          "tp": 20,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "macro_f1": 1.0,
           "documents": 20
         },
         "by_clause_type": {
           "refund": {
             "tp": 4,
-            "fp": 1,
+            "fp": 0,
             "fn": 0,
-            "precision": 0.8,
+            "precision": 1.0,
             "recall": 1.0,
-            "f1": 0.8889
+            "f1": 1.0
           },
           "penalty": {
-            "tp": 3,
+            "tp": 4,
             "fp": 0,
-            "fn": 1,
+            "fn": 0,
             "precision": 1.0,
-            "recall": 0.75,
-            "f1": 0.8571
+            "recall": 1.0,
+            "f1": 1.0
           },
           "auto_renewal": {
-            "tp": 2,
+            "tp": 4,
             "fp": 0,
-            "fn": 2,
+            "fn": 0,
             "precision": 1.0,
-            "recall": 0.5,
-            "f1": 0.6667
+            "recall": 1.0,
+            "f1": 1.0
           },
           "service_term": {
-            "tp": 3,
+            "tp": 4,
             "fp": 0,
-            "fn": 1,
+            "fn": 0,
             "precision": 1.0,
-            "recall": 0.75,
-            "f1": 0.8571
+            "recall": 1.0,
+            "f1": 1.0
           },
           "extra_fee": {
-            "tp": 0,
+            "tp": 4,
             "fp": 0,
-            "fn": 4,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           }
         }
       },
       "matching": {
-        "accuracy": 0.78,
-        "macro_f1_6": 0.321,
-        "macro_f1_3": 0.2996,
+        "accuracy": 1.0,
+        "macro_f1_6": 1.0,
+        "macro_f1_3": 1.0,
         "by_label": {
           "consistent": {
-            "tp": 0,
+            "tp": 5,
             "fp": 0,
-            "fn": 5,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           },
           "conflict": {
-            "tp": 0,
-            "fp": 1,
-            "fn": 5,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "tp": 5,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           },
           "missing_in_contract": {
             "tp": 0,
@@ -3406,23 +3256,23 @@
           },
           "missing_in_promo": {
             "tp": 0,
-            "fp": 5,
+            "fp": 0,
             "fn": 0,
             "precision": 0.0,
             "recall": 0.0,
             "f1": 0.0
           },
           "missing_both": {
-            "tp": 39,
-            "fp": 2,
-            "fn": 1,
-            "precision": 0.9512,
-            "recall": 0.975,
-            "f1": 0.963
+            "tp": 40,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           },
           "unclear": {
             "tp": 0,
-            "fp": 3,
+            "fp": 0,
             "fn": 0,
             "precision": 0.0,
             "recall": 0.0,
@@ -3431,46 +3281,46 @@
         },
         "by_group": {
           "consistent": {
-            "tp": 0,
+            "tp": 5,
             "fp": 0,
-            "fn": 5,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           },
           "conflict": {
-            "tp": 0,
-            "fp": 1,
-            "fn": 5,
-            "precision": 0.0,
-            "recall": 0.0,
-            "f1": 0.0
+            "tp": 5,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
           },
           "insufficient": {
             "tp": 40,
-            "fp": 9,
+            "fp": 0,
             "fn": 0,
-            "precision": 0.8163,
+            "precision": 1.0,
             "recall": 1.0,
-            "f1": 0.8989
+            "f1": 1.0
           }
         },
         "confusion": {
           "consistent": {
-            "consistent": 0,
-            "conflict": 1,
+            "consistent": 5,
+            "conflict": 0,
             "missing_in_contract": 0,
-            "missing_in_promo": 1,
-            "missing_both": 1,
-            "unclear": 2
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
           },
           "conflict": {
             "consistent": 0,
-            "conflict": 0,
+            "conflict": 5,
             "missing_in_contract": 0,
-            "missing_in_promo": 3,
-            "missing_both": 1,
-            "unclear": 1
+            "missing_in_promo": 0,
+            "missing_both": 0,
+            "unclear": 0
           },
           "missing_in_contract": {
             "consistent": 0,
@@ -3492,8 +3342,8 @@
             "consistent": 0,
             "conflict": 0,
             "missing_in_contract": 0,
-            "missing_in_promo": 1,
-            "missing_both": 39,
+            "missing_in_promo": 0,
+            "missing_both": 40,
             "unclear": 0
           },
           "unclear": {
@@ -3505,102 +3355,13 @@
             "unclear": 0
           }
         },
-        "errors": [
-          {
-            "case": "para_001",
-            "split": "paraphrase",
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "consistent",
-            "predicted": "unclear"
-          },
-          {
-            "case": "para_002",
-            "split": "paraphrase",
-            "clause_type": "extra_fee",
-            "clause_label": "额外收费",
-            "gold": "conflict",
-            "predicted": "missing_both"
-          },
-          {
-            "case": "para_003",
-            "split": "paraphrase",
-            "clause_type": "auto_renewal",
-            "clause_label": "自动续费/续租",
-            "gold": "consistent",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "case": "para_004",
-            "split": "paraphrase",
-            "clause_type": "penalty",
-            "clause_label": "违约金",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "case": "para_005",
-            "split": "paraphrase",
-            "clause_type": "service_term",
-            "clause_label": "服务期限",
-            "gold": "consistent",
-            "predicted": "conflict"
-          },
-          {
-            "case": "para_006",
-            "split": "paraphrase",
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "consistent",
-            "predicted": "unclear"
-          },
-          {
-            "case": "para_007",
-            "split": "paraphrase",
-            "clause_type": "service_term",
-            "clause_label": "服务期限",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "case": "para_008",
-            "split": "paraphrase",
-            "clause_type": "auto_renewal",
-            "clause_label": "自动续费/续租",
-            "gold": "conflict",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "case": "para_009",
-            "split": "paraphrase",
-            "clause_type": "extra_fee",
-            "clause_label": "额外收费",
-            "gold": "consistent",
-            "predicted": "missing_both"
-          },
-          {
-            "case": "para_010",
-            "split": "paraphrase",
-            "clause_type": "refund",
-            "clause_label": "退款",
-            "gold": "missing_both",
-            "predicted": "missing_in_promo"
-          },
-          {
-            "case": "para_010",
-            "split": "paraphrase",
-            "clause_type": "penalty",
-            "clause_label": "违约金",
-            "gold": "conflict",
-            "predicted": "unclear"
-          }
-        ],
-        "error_count": 11
+        "errors": [],
+        "error_count": 0
       },
       "evidence": {
-        "correct": 12,
+        "correct": 20,
         "total": 20,
-        "accuracy": 0.6,
+        "accuracy": 1.0,
         "by_clause_type": {
           "refund": {
             "correct": 4,
@@ -3608,24 +3369,24 @@
             "accuracy": 1.0
           },
           "penalty": {
-            "correct": 3,
+            "correct": 4,
             "total": 4,
-            "accuracy": 0.75
+            "accuracy": 1.0
           },
           "auto_renewal": {
-            "correct": 2,
+            "correct": 4,
             "total": 4,
-            "accuracy": 0.5
+            "accuracy": 1.0
           },
           "service_term": {
-            "correct": 3,
+            "correct": 4,
             "total": 4,
-            "accuracy": 0.75
+            "accuracy": 1.0
           },
           "extra_fee": {
-            "correct": 0,
+            "correct": 4,
             "total": 4,
-            "accuracy": 0.0
+            "accuracy": 1.0
           }
         }
       },
@@ -3633,14 +3394,7 @@
         {
           "id": "para_001",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "refund",
-              "clause_label": "退款",
-              "gold": "consistent",
-              "predicted": "unclear"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "refund"
@@ -3661,14 +3415,7 @@
         {
           "id": "para_002",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "extra_fee",
-              "clause_label": "额外收费",
-              "gold": "conflict",
-              "predicted": "missing_both"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "extra_fee"
@@ -3678,21 +3425,18 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
-            "contract": []
+            "promo": [
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
           }
         },
         {
           "id": "para_003",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "auto_renewal",
-              "clause_label": "自动续费/续租",
-              "gold": "consistent",
-              "predicted": "missing_in_promo"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "auto_renewal"
@@ -3702,7 +3446,9 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
+            "promo": [
+              "auto_renewal"
+            ],
             "contract": [
               "auto_renewal"
             ]
@@ -3711,14 +3457,7 @@
         {
           "id": "para_004",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "penalty",
-              "clause_label": "违约金",
-              "gold": "conflict",
-              "predicted": "missing_in_promo"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "penalty"
@@ -3728,7 +3467,9 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
+            "promo": [
+              "penalty"
+            ],
             "contract": [
               "penalty"
             ]
@@ -3737,14 +3478,7 @@
         {
           "id": "para_005",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "service_term",
-              "clause_label": "服务期限",
-              "gold": "consistent",
-              "predicted": "conflict"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "service_term"
@@ -3765,14 +3499,7 @@
         {
           "id": "para_006",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "refund",
-              "clause_label": "退款",
-              "gold": "consistent",
-              "predicted": "unclear"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "refund"
@@ -3793,14 +3520,7 @@
         {
           "id": "para_007",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "service_term",
-              "clause_label": "服务期限",
-              "gold": "conflict",
-              "predicted": "missing_in_promo"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "service_term"
@@ -3810,7 +3530,9 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
+            "promo": [
+              "service_term"
+            ],
             "contract": [
               "service_term"
             ]
@@ -3819,14 +3541,7 @@
         {
           "id": "para_008",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "auto_renewal",
-              "clause_label": "自动续费/续租",
-              "gold": "conflict",
-              "predicted": "missing_in_promo"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "auto_renewal"
@@ -3836,7 +3551,9 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
+            "promo": [
+              "auto_renewal"
+            ],
             "contract": [
               "auto_renewal"
             ]
@@ -3845,14 +3562,7 @@
         {
           "id": "para_009",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "extra_fee",
-              "clause_label": "额外收费",
-              "gold": "consistent",
-              "predicted": "missing_both"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "extra_fee"
@@ -3862,27 +3572,18 @@
             ]
           },
           "extraction_predicted": {
-            "promo": [],
-            "contract": []
+            "promo": [
+              "extra_fee"
+            ],
+            "contract": [
+              "extra_fee"
+            ]
           }
         },
         {
           "id": "para_010",
           "split": "paraphrase",
-          "match_errors": [
-            {
-              "clause_type": "refund",
-              "clause_label": "退款",
-              "gold": "missing_both",
-              "predicted": "missing_in_promo"
-            },
-            {
-              "clause_type": "penalty",
-              "clause_label": "违约金",
-              "gold": "conflict",
-              "predicted": "unclear"
-            }
-          ],
+          "match_errors": [],
           "extraction_gold": {
             "promo": [
               "penalty"
@@ -3896,8 +3597,7 @@
               "penalty"
             ],
             "contract": [
-              "penalty",
-              "refund"
+              "penalty"
             ]
           }
         }

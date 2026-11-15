@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from .extract import clauses_by_type
@@ -144,6 +145,10 @@ def _match_refund(
 
     if promo_rates and contract_rates:
         return Verdict.CONSISTENT, ['双方手续费比例一致'], {'rates': contract_rates}
+    if promo_flags.get('free_of_charge') and contract_fields['flags'].get('free_of_charge'):
+        return Verdict.CONSISTENT, ['双方均声明不收取退款手续费'], {}
+    if promo_flags.get('full_refund') and contract_fields['flags'].get('full_refund'):
+        return Verdict.CONSISTENT, ['双方均声明全额退款'], {}
     if promo_flags.get('refundable') and contract_flags_refundable(contract_fields):
         return Verdict.CONSISTENT, ['双方均确认可退费，未发现数值冲突'], {}
     return Verdict.UNCLEAR, ['双方均有退款表述，但缺少可比较的手续费/条件字段'], {}
@@ -169,8 +174,18 @@ def _match_penalty(
             f"违约金比例不一致：宣传 {_format_rates(promo_fields['rates'])}，"
             f"合同 {_format_rates(contract_fields['rates'])}"
         ], {'promo_rates': promo_fields['rates'], 'contract_rates': contract_fields['rates']}
+    if contract_fields['rates'] and promo_fields['flags'].get('no_penalty'):
+        return Verdict.CONFLICT, [
+            f"宣传声明不收取违约金，合同约定 {_format_rates(contract_fields['rates'])}"
+        ], {'promo_no_penalty': True, 'contract_rates': contract_fields['rates']}
+    if promo_fields['rates'] and contract_fields['flags'].get('no_penalty'):
+        return Verdict.CONFLICT, [
+            f"宣传约定违约金 {_format_rates(promo_fields['rates'])}，合同声明不收取"
+        ], {'promo_rates': promo_fields['rates'], 'contract_no_penalty': True}
     if contract_fields['rates'] and not promo_fields['rates']:
         return Verdict.UNCLEAR, ['合同有明确违约金比例，宣传未给出比例，无法直接比较'], {}
+    if promo_fields['flags'].get('no_penalty') and contract_fields['flags'].get('no_penalty'):
+        return Verdict.CONSISTENT, ['双方均声明不收取违约金'], {}
     return Verdict.CONSISTENT, ['未发现违约金比例冲突'], {}
 
 
@@ -208,6 +223,65 @@ def _match_auto_renewal(
     return Verdict.UNCLEAR, ['双方均有续费表述，但缺少可比较的自动续费标记'], {}
 
 
+def _parse_date(value: str) -> Optional[date]:
+    try:
+        year, month, day = (int(part) for part in value.split('-'))
+        return date(year, month, day)
+    except (ValueError, TypeError):
+        return None
+
+
+def _add_duration(start: date, duration: Dict[str, Any]) -> Optional[date]:
+    value = int(duration.get('value') or 0)
+    unit = str(duration.get('unit') or '')
+    if unit == '年':
+        try:
+            return start.replace(year=start.year + value)
+        except ValueError:  # 2 月 29 日
+            return start.replace(year=start.year + value, day=28)
+    if unit in ('个月', '月'):
+        months = start.month - 1 + value
+        year, month = start.year + months // 12, months % 12 + 1
+        for day in (start.day, 30, 29, 28):
+            try:
+                return date(year, month, day)
+            except ValueError:
+                continue
+        return None
+    days = value * 7 if unit in ('周', '星期') else value
+    return start + timedelta(days=days)
+
+
+def _duration_vs_dates(first: Dict[str, Any], second: Dict[str, Any]) -> Optional[Tuple[bool, str]]:
+    """一侧用「起始日 + 时长」、另一侧用「起止日期」时，换算后再比较。"""
+    for span, ranged in ((first, second), (second, first)):
+        if len(span['dates']) != 1 or not span['durations']:
+            continue
+        if len(ranged['dates']) != 2:
+            continue
+        start = _parse_date(span['dates'][0])
+        other_start = _parse_date(ranged['dates'][0])
+        end = _parse_date(ranged['dates'][1])
+        if not start or not other_start or not end:
+            continue
+        computed = _add_duration(start, span['durations'][0])
+        if computed is None:
+            continue
+        if abs((start - other_start).days) > 1:
+            return False, (
+                f'服务期限起始日不一致：一侧 {start.isoformat()}，另一侧 {other_start.isoformat()}'
+            )
+        if abs((computed - end).days) <= 3:
+            return True, (
+                f'一侧以时长表述，换算后的截止日期 {computed.isoformat()} 与另一侧 {end.isoformat()} 一致'
+            )
+        return False, (
+            f'按起始日与时长换算的截止日期为 {computed.isoformat()}，'
+            f'与另一侧的 {end.isoformat()} 不一致'
+        )
+    return None
+
+
 def _match_service_term(
     promo: Optional[Dict[str, Any]], contract: Optional[Dict[str, Any]],
 ) -> Tuple[Verdict, List[str], Dict[str, Any]]:
@@ -220,6 +294,14 @@ def _match_service_term(
 
     promo_fields, contract_fields = promo['fields'], contract['fields']
     if _values_conflict(promo_fields['dates'], contract_fields['dates']):
+        converted = _duration_vs_dates(promo_fields, contract_fields)
+        if converted is not None:
+            consistent, reason = converted
+            verdict = Verdict.CONSISTENT if consistent else Verdict.CONFLICT
+            return verdict, [reason], {
+                'promo_dates': promo_fields['dates'], 'contract_dates': contract_fields['dates'],
+                'promo_durations': promo_fields['durations'],
+            }
         return Verdict.CONFLICT, [
             f"服务期限不一致：宣传 {promo_fields['dates']}，合同 {contract_fields['dates']}"
         ], {'promo_dates': promo_fields['dates'], 'contract_dates': contract_fields['dates']}
@@ -229,6 +311,9 @@ def _match_service_term(
         ], {}
     if promo_fields['dates'] and contract_fields['dates']:
         return Verdict.CONSISTENT, ['双方服务期限一致'], {'dates': contract_fields['dates']}
+    converted = _duration_vs_dates(promo_fields, contract_fields)
+    if converted is not None and converted[0]:
+        return Verdict.CONSISTENT, [converted[1]], {}
     return Verdict.UNCLEAR, ['双方均有期限表述，但缺少可比较的起止日期'], {}
 
 

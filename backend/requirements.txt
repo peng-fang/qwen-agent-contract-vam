@@ -1,6 +1,9 @@
-fastapi
-uvicorn[standard]
-python-multipart
-aiofiles
-sse-starlette
-# qwen-agent 与 qwen_agent 依赖已由项目主环境安装
+# 后端服务依赖（与项目根 requirements.txt 保持一致）
+# 安装：python -m pip install -r backend/requirements.txt
+fastapi==0.162.7
+starlette==1.10.0
+uvicorn==0.54.0
+python-multipart==0.0.33
+aiofiles==25.1.0
+sse-starlette==3.7.0
+python-dotenv==1.2.4

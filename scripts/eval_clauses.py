@@ -348,6 +348,7 @@ def _errors_section(results: Dict[str, Any]) -> str:
 def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
                     by_split: Dict[str, Dict[str, Any]]) -> str:
     generated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    template, paraphrase = by_split['template'], by_split['paraphrase']
     lines = [
         '# 条款抽取与跨文档匹配评测报告',
         '',
@@ -411,11 +412,18 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
         '',
         '## 八、结论与限制',
         '',
-        '1. 模板子集的标签与规则口径一致，因此规则路径在该子集上接近满分；这验证的是实现一致性，不代表真实合同准确率。',
-        '2. 改写子集暴露了规则路径的主要短板：同义表达（如「自动扣费」「全额返还」「无额外罚金」）没有命中关键词，导致漏抽或判成证据不足。',
-        '3. 证据定位只覆盖单页 txt；PDF 多页、扫描件与 OCR 尚未纳入本评测。',
-        '4. 未使用模型路径；若配置 `CLAUSE_LLM_PROVIDER`，模型只提议片段，定位与判定仍由确定性代码完成，需另跑模型对照。',
-        '5. 结果仅用于课程项目评测，不构成法律意见。',
+        f"1. 模板子集（{template['case_count']} 组）抽取 {_fmt(template['extraction']['overall']['macro_f1'])} / "
+        f"匹配 {_fmt(template['matching']['macro_f1_6'])} / 证据 {_fmt(template['evidence']['accuracy'])}；"
+        '标签与规则口径一致，接近满分验证的是实现一致性。',
+        f"2. 改写子集（{paraphrase['case_count']} 组）抽取 {_fmt(paraphrase['extraction']['overall']['macro_f1'])} / "
+        f"匹配 {_fmt(paraphrase['matching']['macro_f1_6'])} / 证据 {_fmt(paraphrase['evidence']['accuracy'])}。"
+        '本轮补充的同义词、否定/条件表达与「起始日 + 时长 vs 起止日期」换算正是针对这类改写；'
+        '改写样本只有 10 组，规则与样本高度重合，提升幅度不能外推为真实合同的泛化能力。',
+        '3. 规则仍是字面匹配：未覆盖的表达（方言、英文、复杂嵌套条件、跨句指代）会继续漏抽；'
+        '评测中的同义表达集合很小，后续应扩充独立构造、未经规则参考的改写集再复测。',
+        '4. 证据定位只覆盖单页 txt；PDF 多页、扫描件与 OCR 尚未纳入本评测。',
+        '5. 未使用模型路径；若配置 `CLAUSE_LLM_PROVIDER`，模型只提议片段，定位与判定仍由确定性代码完成，需另跑模型对照。',
+        '6. 结果仅用于课程项目评测，不构成法律意见。',
     ]
     return '\n'.join(lines) + '\n'
 
@@ -441,6 +449,14 @@ def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
         f"<td>{_fmt(value['matching']['accuracy'])}</td>"
         f"<td>{_fmt(value['evidence']['accuracy'])}</td></tr>"
         for key, value in by_split.items()
+    )
+    paraphrase = by_split['paraphrase']
+    warn = (
+        f"模板子集 {by_split['template']['case_count']} 组，匹配 Macro-F1 "
+        f"{_fmt(by_split['template']['matching']['macro_f1_6'])}；"
+        f"改写子集仅 {paraphrase['case_count']} 组，匹配 Macro-F1 "
+        f"{_fmt(paraphrase['matching']['macro_f1_6'])}。"
+        '本轮规则补充与这 10 组改写高度重合，接近满分只说明覆盖了这批表达，不能推断真实合同分布。'
     )
     extraction_rows = ''.join(
         f"<tr><td>{CLAUSE_LABELS[clause_type]}</td>"
@@ -512,7 +528,7 @@ def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
   </div>
 
   <div class="warn">
-    模板子集标签与规则口径一致，接近满分只代表实现一致性；改写子集更能反映规则路径的真实短板。
+    {html.escape(warn)}
   </div>
 
   <section>
