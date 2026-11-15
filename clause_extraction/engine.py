@@ -9,6 +9,8 @@ from .extract import extract_document
 from .llm_extractor import extract_with_llm
 from .match import match_documents
 from .pdf_reader import load_document
+from .review import review_bundle
+from .risk import assess_risk
 from .schema import Clause, DocRole, Document, ExtractionBundle
 
 
@@ -49,12 +51,17 @@ def analyze_documents(
         warnings.append('未识别到合同，跨文档匹配只输出宣传单边结果')
 
     matches = match_documents(list(documents), clauses)
+    review = review_bundle(list(documents), clauses)
+    if review['failed']:
+        warnings.append(f"证据复核发现 {review['failed']} 条不一致，已在 evidence_review 中列出")
     return ExtractionBundle(
         documents=list(documents),
         clauses=clauses,
         matches=matches,
         extractor='rules+llm' if used_llm else 'rules',
         warnings=warnings,
+        evidence_review=review,
+        risk=assess_risk(matches, clauses),
     )
 
 

@@ -8,6 +8,12 @@
 """
 
 from pathlib import Path
+import sys
+
+# 让仓库内自带的 qwen_agent 源码可直接导入（离线包不依赖 pip install -e .）
+ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware

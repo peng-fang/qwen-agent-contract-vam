@@ -61,6 +61,34 @@ VERDICT_LABELS: Dict[Verdict, str] = {
 }
 
 
+class VerdictGroup(str, Enum):
+    """三层主结论：与课程/文档口径保持一致，六标签细分归入其三。"""
+
+    CONSISTENT = 'consistent'
+    CONFLICT = 'conflict'
+    INSUFFICIENT = 'insufficient'
+
+
+VERDICT_GROUPS: Dict[Verdict, VerdictGroup] = {
+    Verdict.CONSISTENT: VerdictGroup.CONSISTENT,
+    Verdict.CONFLICT: VerdictGroup.CONFLICT,
+    Verdict.MISSING_IN_CONTRACT: VerdictGroup.INSUFFICIENT,
+    Verdict.MISSING_IN_PROMO: VerdictGroup.INSUFFICIENT,
+    Verdict.MISSING_BOTH: VerdictGroup.INSUFFICIENT,
+    Verdict.UNCLEAR: VerdictGroup.INSUFFICIENT,
+}
+
+VERDICT_GROUP_LABELS: Dict[VerdictGroup, str] = {
+    VerdictGroup.CONSISTENT: '一致',
+    VerdictGroup.CONFLICT: '矛盾',
+    VerdictGroup.INSUFFICIENT: '证据不足',
+}
+
+
+def verdict_group(verdict: Verdict) -> VerdictGroup:
+    return VERDICT_GROUPS[verdict]
+
+
 @dataclass
 class PageText:
     """单页文本。page 从 1 开始。"""
@@ -106,8 +134,14 @@ class EvidenceSpan:
     char_end: int
     quote: str
 
+    @property
+    def evidence_id(self) -> str:
+        """稳定证据 ID：同一文件、同一页、同一字符区间永远得到同一个 ID。"""
+        return f'ev-{self.document_id}-p{self.page}-c{self.char_start}-{self.char_end}'
+
     def to_dict(self) -> Dict[str, Any]:
         return {
+            'evidence_id': self.evidence_id,
             'document_id': self.document_id,
             'filename': self.filename,
             'role': self.role.value,
@@ -164,11 +198,14 @@ class MatchResult:
     compared: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
+        group = VERDICT_GROUPS[self.verdict]
         return {
             'clause_type': self.clause_type.value,
             'clause_label': CLAUSE_LABELS[self.clause_type],
             'verdict': self.verdict.value,
             'verdict_label': VERDICT_LABELS[self.verdict],
+            'verdict_group': group.value,
+            'verdict_group_label': VERDICT_GROUP_LABELS[group],
             'reasons': list(self.reasons),
             'promo': _jsonable(self.promo),
             'contract': _jsonable(self.contract),
@@ -185,6 +222,8 @@ class ExtractionBundle:
     matches: List[MatchResult] = field(default_factory=list)
     extractor: str = 'rules'
     warnings: List[str] = field(default_factory=list)
+    evidence_review: Dict[str, Any] = field(default_factory=dict)
+    risk: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -193,6 +232,8 @@ class ExtractionBundle:
             'matches': [m.to_dict() for m in self.matches],
             'extractor': self.extractor,
             'warnings': list(self.warnings),
+            'evidence_review': _jsonable(self.evidence_review),
+            'risk': _jsonable(self.risk),
         }
 
 

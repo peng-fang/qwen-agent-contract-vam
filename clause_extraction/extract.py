@@ -158,8 +158,8 @@ def extract_fields(text: str) -> Dict[str, Any]:
         'auto_renewal': bool(re.search(r'自动续费|自动续租|视为同意续费|视为同意续租', masked))
         and not bool(re.search(r'不自动续费|不自动续租|无需自动续费', masked)),
         'no_auto_renewal': bool(re.search(r'不自动续费|不自动续租|不设.{0,4}续租', masked)),
-        'refundable': bool(re.search(r'可.{0,4}退费|支持退费|随时退', masked))
-        and not bool(re.search(r'不支持退费|不予退费', masked)),
+        'refundable': bool(re.search(r'可.{0,6}退(?:费|款)|支持退(?:费|款)|随时退', masked))
+        and not bool(re.search(r'不支持退(?:费|款)|不予退(?:费|款)|不退(?:费|款)', masked)),
     }
     flags = {key: value for key, value in flags.items() if value}
 

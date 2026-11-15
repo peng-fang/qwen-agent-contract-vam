@@ -8,6 +8,8 @@ export interface EvidenceDetail {
   filename?: string
   page?: number | null
   clauseLabel?: string
+  evidenceId?: string
+  verified?: boolean
 }
 
 interface Props {
@@ -48,10 +50,16 @@ export function EvidenceDrawer({ open, evidence, file, onClose }: Props) {
               {typeof evidence.page === 'number' && (
                 <Badge variant="yellow">第 {evidence.page} 页</Badge>
               )}
+              {evidence.verified && <Badge variant="green">后端按 ID 校验通过</Badge>}
             </div>
             <div className="mt-1 truncate text-xs text-muted-foreground">
               {evidence.filename || '模型输入片段'}
             </div>
+            {evidence.evidenceId && (
+              <div className="mt-1 break-all font-mono text-[11px] text-muted-foreground">
+                {evidence.evidenceId}
+              </div>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={onClose} aria-label="关闭证据">
             ✕
