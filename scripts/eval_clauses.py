@@ -26,7 +26,13 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from clause_extraction import DocRole, analyze_files  # noqa: E402
+from clause_extraction import (  # noqa: E402
+    DocRole,
+    Document,
+    PageText,
+    analyze_documents,
+    analyze_files,
+)
 
 DATA = ROOT / 'eval_data'
 REPORTS = ROOT / 'reports'
@@ -96,6 +102,30 @@ def _quote_matches(quote: str, gold_sentence: str) -> bool:
     return left in right or right in left
 
 
+def _bundle(case: Dict[str, Any]):
+    """支持两种数据形式：文件对（调参集）或内联文本（冻结留出集）。"""
+    if 'promo_text' in case and 'contract_text' in case:
+        documents = [
+            Document(
+                document_id=f"{case['id']}-promo",
+                filename=f"{case['id']}_promo.txt",
+                role=DocRole.PROMO,
+                pages=[PageText(page=1, text=case['promo_text'])],
+            ),
+            Document(
+                document_id=f"{case['id']}-contract",
+                filename=f"{case['id']}_contract.txt",
+                role=DocRole.CONTRACT,
+                pages=[PageText(page=1, text=case['contract_text'])],
+            ),
+        ]
+        return analyze_documents(documents)
+    return analyze_files([
+        (str(DATA / case['promo_file']), DocRole.PROMO),
+        (str(DATA / case['contract_file']), DocRole.CONTRACT),
+    ])
+
+
 def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None) -> Dict[str, Any]:
     selected = [case for case in cases if split is None or case.get('split') == split]
 
@@ -111,10 +141,7 @@ def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None) -> Dict[s
     case_records: List[Dict[str, Any]] = []
 
     for case in selected:
-        bundle = analyze_files([
-            (str(DATA / case['promo_file']), DocRole.PROMO),
-            (str(DATA / case['contract_file']), DocRole.CONTRACT),
-        ])
+        bundle = _bundle(case)
         documents = {document.role: document for document in bundle.documents}
 
         for role_key, role in (('promo', DocRole.PROMO), ('contract', DocRole.CONTRACT)):
@@ -419,8 +446,9 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
         f"匹配 {_fmt(paraphrase['matching']['macro_f1_6'])} / 证据 {_fmt(paraphrase['evidence']['accuracy'])}。"
         '本轮补充的同义词、否定/条件表达与「起始日 + 时长 vs 起止日期」换算正是针对这类改写；'
         '改写样本只有 10 组，规则与样本高度重合，提升幅度不能外推为真实合同的泛化能力。',
-        '3. 规则仍是字面匹配：未覆盖的表达（方言、英文、复杂嵌套条件、跨句指代）会继续漏抽；'
-        '评测中的同义表达集合很小，后续应扩充独立构造、未经规则参考的改写集再复测。',
+        '3. 规则仍是字面匹配：未覆盖的表达（方言、英文、复杂嵌套条件、跨句指代）会继续漏抽。'
+        '已另建 40 组独立留出集（`eval_data/heldout/`），基线见 `reports/eval_heldout_report.md`；'
+        '留出集数字明显低于本报告，说明本报告的 1.000 主要来自规则与调参样本重合。',
         '4. 证据定位只覆盖单页 txt；PDF 多页、扫描件与 OCR 尚未纳入本评测。',
         '5. 未使用模型路径；若配置 `CLAUSE_LLM_PROVIDER`，模型只提议片段，定位与判定仍由确定性代码完成，需另跑模型对照。',
         '6. 结果仅用于课程项目评测，不构成法律意见。',

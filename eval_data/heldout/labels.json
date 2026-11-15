@@ -1,0 +1,338 @@
+{
+  "dataset": "clause-holdout-v1",
+  "description": "独立留出集：口语/方言、英文与中英混写、跨句指代、复杂嵌套条件、数字与单位新写法；与调参集刻意错开",
+  "created_at": "2026-11-15",
+  "frozen": true,
+  "tuning_disjoint": "本文件中的 40 组样本在建立后、运行基线前一次性冻结，未用于此前任何规则调整；后续若根据本集错误修改规则，必须在报告中标注为污染后结果。",
+  "case_count": 40,
+  "splits": {
+    "dialect": 8,
+    "english": 8,
+    "coref": 8,
+    "nested": 8,
+    "numeric": 8
+  },
+  "clause_types": ["refund", "penalty", "auto_renewal", "service_term", "extra_fee"],
+  "cases": [
+    {
+      "id": "a01",
+      "split": "dialect",
+      "promo_text": "不想学了随时退钱，一分不扣。",
+      "contract_text": "退费按剩余课时结算，另扣两百元手续费。",
+      "expected_verdicts": {"refund": "conflict", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "不想学了随时退钱，一分不扣。"}, "contract": {"refund": "退费按剩余课时结算，另扣两百元手续费。"}}
+    },
+    {
+      "id": "a02",
+      "split": "dialect",
+      "promo_text": "七天内退钱，全额给回。",
+      "contract_text": "七日内退费，全额退还。",
+      "expected_verdicts": {"refund": "consistent", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "七天内退钱，全额给回。"}, "contract": {"refund": "七日内退费，全额退还。"}}
+    },
+    {
+      "id": "a03",
+      "split": "dialect",
+      "promo_text": "到期就停，不会再扣钱。",
+      "contract_text": "期满自动续订一年，费用照扣。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "conflict", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"auto_renewal": "到期就停，不会再扣钱。"}, "contract": {"auto_renewal": "期满自动续订一年，费用照扣。"}}
+    },
+    {
+      "id": "a04",
+      "split": "dialect",
+      "promo_text": "一次交清，后面不加钱。",
+      "contract_text": "教材另算，三百块。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "conflict"},
+      "gold_clauses": {"promo": {"extra_fee": "一次交清，后面不加钱。"}, "contract": {"extra_fee": "教材另算，三百块。"}}
+    },
+    {
+      "id": "a05",
+      "split": "dialect",
+      "promo_text": "中途不学了要赔一个月学费。",
+      "contract_text": "双方可协商解除。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_in_contract", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "中途不学了要赔一个月学费。"}, "contract": {}}
+    },
+    {
+      "id": "a06",
+      "split": "dialect",
+      "promo_text": "这卡能用一年，从交钱那天算。",
+      "contract_text": "服务期限自付款日起十二个月。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "consistent", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "这卡能用一年，从交钱那天算。"}, "contract": {"service_term": "服务期限自付款日起十二个月。"}}
+    },
+    {
+      "id": "a07",
+      "split": "dialect",
+      "promo_text": "周末小班，随到随学。",
+      "contract_text": "钱交了就不退。",
+      "expected_verdicts": {"refund": "missing_in_promo", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {}, "contract": {"refund": "钱交了就不退。"}}
+    },
+    {
+      "id": "a08",
+      "split": "dialect",
+      "promo_text": "没有别的费用，不用再掏钱。",
+      "contract_text": "除学费外无其他收费。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "consistent"},
+      "gold_clauses": {"promo": {"extra_fee": "没有别的费用，不用再掏钱。"}, "contract": {"extra_fee": "除学费外无其他收费。"}}
+    },
+    {
+      "id": "b01",
+      "split": "english",
+      "promo_text": "Full refund within 7 days, no fee.",
+      "contract_text": "Refund: 20% cancellation fee applies.",
+      "expected_verdicts": {"refund": "conflict", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "Full refund within 7 days, no fee."}, "contract": {"refund": "Refund: 20% cancellation fee applies."}}
+    },
+    {
+      "id": "b02",
+      "split": "english",
+      "promo_text": "Early cancellation fee: 10% of remaining.",
+      "contract_text": "提前解约违约金为剩余费用的 10%。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "consistent", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "Early cancellation fee: 10% of remaining."}, "contract": {"penalty": "提前解约违约金为剩余费用的 10%。"}}
+    },
+    {
+      "id": "b03",
+      "split": "english",
+      "promo_text": "No auto-renewal. Membership ends on expiry.",
+      "contract_text": "会员到期自动续费，提前 7 日通知。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "conflict", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"auto_renewal": "No auto-renewal. Membership ends on expiry."}, "contract": {"auto_renewal": "会员到期自动续费，提前 7 日通知。"}}
+    },
+    {
+      "id": "b04",
+      "split": "english",
+      "promo_text": "Term: 12 months from 2026-03-01.",
+      "contract_text": "服务期限为 2026 年 3 月 1 日至 2027 年 2 月 28 日。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "consistent", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "Term: 12 months from 2026-03-01."}, "contract": {"service_term": "服务期限为 2026 年 3 月 1 日至 2027 年 2 月 28 日。"}}
+    },
+    {
+      "id": "b05",
+      "split": "english",
+      "promo_text": "All materials included. No extra charge.",
+      "contract_text": "Workbook fee 300 元，另计。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "conflict"},
+      "gold_clauses": {"promo": {"extra_fee": "All materials included. No extra charge."}, "contract": {"extra_fee": "Workbook fee 300 元，另计。"}}
+    },
+    {
+      "id": "b06",
+      "split": "english",
+      "promo_text": "30-day money-back guarantee.",
+      "contract_text": "课程安排以实际开班为准。",
+      "expected_verdicts": {"refund": "missing_in_contract", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "30-day money-back guarantee."}, "contract": {}}
+    },
+    {
+      "id": "b07",
+      "split": "english",
+      "promo_text": "报名即送教材。",
+      "contract_text": "Early termination: 30% of remaining tuition.",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_in_promo", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {}, "contract": {"penalty": "Early termination: 30% of remaining tuition."}}
+    },
+    {
+      "id": "b08",
+      "split": "english",
+      "promo_text": "有效期 6 个月。",
+      "contract_text": "服务期自 2026-01-01 至 2026-12-31。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "conflict", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "有效期 6 个月。"}, "contract": {"service_term": "服务期自 2026-01-01 至 2026-12-31。"}}
+    },
+    {
+      "id": "c01",
+      "split": "coref",
+      "promo_text": "报名后七日内可申请退款。前述手续费一律不收。",
+      "contract_text": "退款需扣除 20% 手续费。该费用在退款时直接扣减。",
+      "expected_verdicts": {"refund": "conflict", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "报名后七日内可申请退款。"}, "contract": {"refund": "退款需扣除 20% 手续费。"}}
+    },
+    {
+      "id": "c02",
+      "split": "coref",
+      "promo_text": "学费包含全部材料。前述费用之外不再收取任何款项。",
+      "contract_text": "讲义按年收费，标准见附件。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "conflict"},
+      "gold_clauses": {"promo": {"extra_fee": "学费包含全部材料。"}, "contract": {"extra_fee": "讲义按年收费，标准见附件。"}}
+    },
+    {
+      "id": "c03",
+      "split": "coref",
+      "promo_text": "会员到期即止。该条款不涉及任何续期。",
+      "contract_text": "本协议到期后顺延一年，无需另行确认。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "conflict", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"auto_renewal": "该条款不涉及任何续期。"}, "contract": {"auto_renewal": "本协议到期后顺延一年，无需另行确认。"}}
+    },
+    {
+      "id": "c04",
+      "split": "coref",
+      "promo_text": "课程周期见下方说明。该周期为六个月。",
+      "contract_text": "服务期限为 2026-01-01 至 2026-12-31。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "conflict", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "该周期为六个月。"}, "contract": {"service_term": "服务期限为 2026-01-01 至 2026-12-31。"}}
+    },
+    {
+      "id": "c05",
+      "split": "coref",
+      "promo_text": "提前退出按剩余课时的两成计算赔偿。上述标准适用于所有班型。",
+      "contract_text": "提前退课按剩余课时 20% 支付违约金。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "consistent", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "提前退出按剩余课时的两成计算赔偿。"}, "contract": {"penalty": "提前退课按剩余课时 20% 支付违约金。"}}
+    },
+    {
+      "id": "c06",
+      "split": "coref",
+      "promo_text": "开课前可退。该款项全额返还。",
+      "contract_text": "开课前退款，全额退还。",
+      "expected_verdicts": {"refund": "consistent", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "该款项全额返还。"}, "contract": {"refund": "开课前退款，全额退还。"}}
+    },
+    {
+      "id": "c07",
+      "split": "coref",
+      "promo_text": "储物柜免费使用，不另收费。",
+      "contract_text": "课程安排以实际为准。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_in_contract"},
+      "gold_clauses": {"promo": {"extra_fee": "储物柜免费使用，不另收费。"}, "contract": {}}
+    },
+    {
+      "id": "c08",
+      "split": "coref",
+      "promo_text": "小班授课，名额有限。",
+      "contract_text": "到期未提出异议的，视为同意继续。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_in_promo", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {}, "contract": {"auto_renewal": "到期未提出异议的，视为同意继续。"}}
+    },
+    {
+      "id": "d01",
+      "split": "nested",
+      "promo_text": "若课程未开始且非因学员原因，可全额退款。",
+      "contract_text": "退款时，若已开课或非机构原因，扣除 30% 手续费。",
+      "expected_verdicts": {"refund": "conflict", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "若课程未开始且非因学员原因，可全额退款。"}, "contract": {"refund": "退款时，若已开课或非机构原因，扣除 30% 手续费。"}}
+    },
+    {
+      "id": "d02",
+      "split": "nested",
+      "promo_text": "除非机构违约，否则提前退出不收取任何费用。",
+      "contract_text": "提前解除合同的，须支付违约金 20%。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "conflict", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "除非机构违约，否则提前退出不收取任何费用。"}, "contract": {"penalty": "提前解除合同的，须支付违约金 20%。"}}
+    },
+    {
+      "id": "d03",
+      "split": "nested",
+      "promo_text": "只要在到期前三十天书面通知，就不会自动续期。",
+      "contract_text": "未在到期前三十天书面通知的，自动续费一年。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "conflict", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"auto_renewal": "只要在到期前三十天书面通知，就不会自动续期。"}, "contract": {"auto_renewal": "未在到期前三十天书面通知的，自动续费一年。"}}
+    },
+    {
+      "id": "d04",
+      "split": "nested",
+      "promo_text": "服务自 2026-03-01 起，至 2027-02-28 止，除非双方另行书面约定。",
+      "contract_text": "服务期限为 2026 年 3 月 1 日至 2027 年 2 月 28 日。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "consistent", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "服务自 2026-03-01 起，至 2027-02-28 止，除非双方另行书面约定。"}, "contract": {"service_term": "服务期限为 2026 年 3 月 1 日至 2027 年 2 月 28 日。"}}
+    },
+    {
+      "id": "d05",
+      "split": "nested",
+      "promo_text": "若选择周末班且非会员，不额外收费。",
+      "contract_text": "周末班加收 500 元/期，会员亦同。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "conflict"},
+      "gold_clauses": {"promo": {"extra_fee": "若选择周末班且非会员，不额外收费。"}, "contract": {"extra_fee": "周末班加收 500 元/期，会员亦同。"}}
+    },
+    {
+      "id": "d06",
+      "split": "nested",
+      "promo_text": "课程介绍详见官网。",
+      "contract_text": "仅在未开课且学员提供书面申请的情况下，方可退还 50%。",
+      "expected_verdicts": {"refund": "missing_in_promo", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {}, "contract": {"refund": "仅在未开课且学员提供书面申请的情况下，方可退还 50%。"}}
+    },
+    {
+      "id": "d07",
+      "split": "nested",
+      "promo_text": "若非学员原因停课，机构赔偿剩余课时费。",
+      "contract_text": "课程调整以机构通知为准。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_in_contract", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "若非学员原因停课，机构赔偿剩余课时费。"}, "contract": {}}
+    },
+    {
+      "id": "d08",
+      "split": "nested",
+      "promo_text": "到期前未取消的，按年顺延。",
+      "contract_text": "期满未书面取消的，自动续租一年。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "consistent", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"auto_renewal": "到期前未取消的，按年顺延。"}, "contract": {"auto_renewal": "期满未书面取消的，自动续租一年。"}}
+    },
+    {
+      "id": "e01",
+      "split": "numeric",
+      "promo_text": "退款只扣百分之五。",
+      "contract_text": "退款扣除两成手续费。",
+      "expected_verdicts": {"refund": "conflict", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "退款只扣百分之五。"}, "contract": {"refund": "退款扣除两成手续费。"}}
+    },
+    {
+      "id": "e02",
+      "split": "numeric",
+      "promo_text": "提前解约按剩余费用两成赔偿。",
+      "contract_text": "提前解除支付剩余费用 20% 违约金。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "consistent", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "提前解约按剩余费用两成赔偿。"}, "contract": {"penalty": "提前解除支付剩余费用 20% 违约金。"}}
+    },
+    {
+      "id": "e03",
+      "split": "numeric",
+      "promo_text": "有效期二十四个月，自 2026-01-01 起。",
+      "contract_text": "服务期限 2026-01-01 至 2027-12-31。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "consistent", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "有效期二十四个月，自 2026-01-01 起。"}, "contract": {"service_term": "服务期限 2026-01-01 至 2027-12-31。"}}
+    },
+    {
+      "id": "e04",
+      "split": "numeric",
+      "promo_text": "学费外不再收费。",
+      "contract_text": "每月收取一百元讲义费。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "conflict"},
+      "gold_clauses": {"promo": {"extra_fee": "学费外不再收费。"}, "contract": {"extra_fee": "每月收取一百元讲义费。"}}
+    },
+    {
+      "id": "e05",
+      "split": "numeric",
+      "promo_text": "七日内退钱，手续费百分之十。",
+      "contract_text": "七日内退款，收取 10% 手续费。",
+      "expected_verdicts": {"refund": "consistent", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"refund": "七日内退钱，手续费百分之十。"}, "contract": {"refund": "七日内退款，收取 10% 手续费。"}}
+    },
+    {
+      "id": "e06",
+      "split": "numeric",
+      "promo_text": "学习时间共十八个月。",
+      "contract_text": "服务期限为 2026-01-01 至 2026-12-31。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "conflict", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"service_term": "学习时间共十八个月。"}, "contract": {"service_term": "服务期限为 2026-01-01 至 2026-12-31。"}}
+    },
+    {
+      "id": "e07",
+      "split": "numeric",
+      "promo_text": "提前终止不扣任何钱。",
+      "contract_text": "提前终止按未履行部分的三成收取违约金。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "conflict", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "missing_both"},
+      "gold_clauses": {"promo": {"penalty": "提前终止不扣任何钱。"}, "contract": {"penalty": "提前终止按未履行部分的三成收取违约金。"}}
+    },
+    {
+      "id": "e08",
+      "split": "numeric",
+      "promo_text": "水电网全包，不单收。",
+      "contract_text": "物业费、网费已含在租金内。",
+      "expected_verdicts": {"refund": "missing_both", "penalty": "missing_both", "auto_renewal": "missing_both", "service_term": "missing_both", "extra_fee": "consistent"},
+      "gold_clauses": {"promo": {"extra_fee": "水电网全包，不单收。"}, "contract": {"extra_fee": "物业费、网费已含在租金内。"}}
+    }
+  ]
+}
