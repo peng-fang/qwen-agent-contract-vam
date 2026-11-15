@@ -121,3 +121,23 @@ class ClauseExtractionResponse(BaseModel):
     matches: List[Dict[str, Any]]
     extractor: str
     warnings: List[str]
+
+
+class RentalReviewResponse(BaseModel):
+    filename: str
+    file_type: str
+    region: str
+    region_label: str
+    contract_type: str
+    contract_type_label: str
+    contract_type_requested: str
+    classification: Dict[str, Any]
+    page_count: int
+    clause_count: int
+    facts: Dict[str, Any]
+    risks: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+    agent_trace: List[Dict[str, Any]]
+    warnings: List[str]
+    disclaimer: str
+    cache_hit: bool = False
