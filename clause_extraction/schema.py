@@ -196,6 +196,7 @@ class MatchResult:
     promo: Optional[Dict[str, Any]] = None
     contract: Optional[Dict[str, Any]] = None
     compared: Dict[str, Any] = field(default_factory=dict)
+    amount: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         group = VERDICT_GROUPS[self.verdict]
@@ -210,6 +211,7 @@ class MatchResult:
             'promo': _jsonable(self.promo),
             'contract': _jsonable(self.contract),
             'compared': _jsonable(self.compared),
+            'amount': _jsonable(self.amount) if self.amount is not None else None,
         }
 
 

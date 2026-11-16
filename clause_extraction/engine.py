@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 from typing import Iterable, List, Optional, Sequence, Tuple
 
+from .amounts import build_amount_checks
 from .extract import extract_document
 from .llm_extractor import extract_with_llm
 from .match import match_documents
@@ -51,6 +52,9 @@ def analyze_documents(
         warnings.append('未识别到合同，跨文档匹配只输出宣传单边结果')
 
     matches = match_documents(list(documents), clauses)
+    amount_checks = build_amount_checks(matches, clauses, documents)
+    for match in matches:
+        match.amount = amount_checks.get(match.clause_type.value)
     review = review_bundle(list(documents), clauses)
     if review['failed']:
         warnings.append(f"证据复核发现 {review['failed']} 条不一致，已在 evidence_review 中列出")

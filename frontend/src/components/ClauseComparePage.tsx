@@ -5,11 +5,91 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   extractClauses,
   resolveEvidence,
+  type AmountCheck,
   type ClauseMatch,
   type ClauseSide,
   type ClauseExtractionResult,
 } from '@/lib/api'
 import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
+
+function AmountBlock({
+  check,
+  onResolve,
+}: {
+  check: AmountCheck
+  onResolve: (evidenceId: string) => void
+}) {
+  const tone =
+    check.status === 'applicable'
+      ? 'border-emerald-200 bg-emerald-50/60'
+      : check.status === 'not_applicable'
+        ? 'border-red-200 bg-red-50/60'
+        : check.status === 'conditional'
+          ? 'border-amber-200 bg-amber-50/60'
+          : 'border-border bg-muted/30'
+  const badge =
+    check.status === 'applicable'
+      ? 'green'
+      : check.status === 'not_applicable'
+        ? 'red'
+        : check.status === 'conditional'
+          ? 'yellow'
+          : 'secondary'
+
+  return (
+    <div className={`mt-2 rounded-md border p-2 text-xs ${tone}`}>
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Badge variant={badge as 'green' | 'red' | 'yellow' | 'secondary'}>金额条件：{check.status_label}</Badge>
+        {check.missing.length > 0 && (
+          <span className="text-muted-foreground">缺：{check.missing.join('、')}</span>
+        )}
+      </div>
+      {check.reason && <div className="mt-1 text-red-700">{check.reason}</div>}
+      {check.basis.length > 0 && (
+        <ul className="mt-1.5 space-y-0.5 text-muted-foreground">
+          {check.basis.map((item) => (
+            <li key={`${item.evidence_id}-${item.condition}`} className="flex flex-wrap gap-1">
+              <span className="font-mono">{item.met === true ? '✓' : item.met === false ? '✗' : '?'}</span>
+              <span>{item.condition}</span>
+              <button
+                type="button"
+                className="text-[11px] text-blue-600 underline-offset-2 hover:underline"
+                onClick={() => onResolve(item.evidence_id)}
+                title={item.quote}
+              >
+                {item.evidence_id}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {check.scenarios.length > 0 && (
+        <div className="mt-1.5 space-y-1">
+          {check.scenarios.map((scenario) => (
+            <div key={scenario.label} className="rounded border border-border/60 bg-white/70 p-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-1">
+                <span className="font-medium">{scenario.label}</span>
+                <span className="tabular-nums">
+                  {scenario.amount === null
+                    ? scenario.applicable === false
+                      ? '不适用，不计算金额'
+                      : '金额未计算'
+                    : `¥${scenario.amount.toFixed(2)}`}
+                </span>
+              </div>
+              <div className="text-muted-foreground">触发：{scenario.condition}</div>
+              <div className="text-[11px] text-muted-foreground">公式：{scenario.formula}</div>
+              {scenario.missing.length > 0 && (
+                <div className="text-[11px] text-amber-700">缺少：{scenario.missing.join('、')}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="mt-1 text-[11px] text-muted-foreground">{check.note}</div>
+    </div>
+  )
+}
 
 const CLAUSE_ORDER = [
   'refund',
@@ -154,6 +234,9 @@ function MatchRow({
                   <li key={reason}>· {reason}</li>
                 ))}
               </ul>
+            )}
+            {match.amount && match.amount.status !== 'no_amount' && (
+              <AmountBlock check={match.amount} onResolve={onResolve} />
             )}
           </div>
         ) : (

@@ -5,6 +5,7 @@
 - analyze_documents([Document], use_llm=False) -> ExtractionBundle
 """
 
+from .amounts import build_amount_checks
 from .engine import analyze_documents, analyze_files, infer_role
 from .extract import extract_document, extract_fields, locate_quote
 from .match import match_documents
@@ -40,6 +41,7 @@ __all__ = [
     'analyze_documents',
     'analyze_files',
     'infer_role',
+    'build_amount_checks',
     'extract_document',
     'extract_fields',
     'locate_quote',

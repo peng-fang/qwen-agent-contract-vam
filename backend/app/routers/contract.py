@@ -3,6 +3,7 @@
 import asyncio
 import json
 import queue
+import re
 import threading
 import uuid
 from pathlib import Path
@@ -15,11 +16,34 @@ from starlette.concurrency import run_in_threadpool
 
 from app.schemas import ContractAnalyzeResponse, RentalReviewResponse
 from app.services.contract_service import analyze_contract
+from app.services.clause_service import inspect_amounts
 from app.services import rental_review_service
 
 router = APIRouter(prefix='/api/contract', tags=['contract'])
 
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / 'uploads'
+
+_MONEY_IN_ANSWER = re.compile(r'[0-9]+\s*(?:元|块)|退款|退费|违约金|手续费')
+
+
+def _amount_notice(answer: str, checks: List[dict]) -> str:
+    """模型回答含金额时，先说明确定性条件核验是否通过。"""
+    if not checks or not _MONEY_IN_ANSWER.search(answer or ''):
+        return ''
+    blocked = [
+        item for item in checks
+        if item.get('status') in {'not_applicable', 'insufficient', 'conditional'}
+    ]
+    if not blocked:
+        return ''
+    details = '；'.join(
+        f"{item.get('clause_label', item.get('clause_type'))}：{item.get('status_label', '')}"
+        for item in blocked
+    )
+    return (
+        '【金额适用条件未全部满足】' + details
+        + '。以下回答中的金额不能直接作为结算依据，请先补齐条件或参数。'
+    )
 
 
 @router.post('/analyze', response_model=ContractAnalyzeResponse)
@@ -31,6 +55,7 @@ async def analyze(
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
     saved: List[str] = []
+    specs: List[tuple] = []
     for f in files:
         if not f.filename:
             continue
@@ -41,12 +66,19 @@ async def analyze(
         async with aiofiles.open(dest, 'wb') as out:
             await out.write(data)
         saved.append(str(dest))
+        specs.append((str(dest), Path(f.filename).name))
 
     answer = await run_in_threadpool(analyze_contract, saved, question)
+    try:
+        checks = await run_in_threadpool(inspect_amounts, specs)
+    except Exception:  # noqa: BLE001 - 条件核验失败不能阻断问答
+        checks = []
     return ContractAnalyzeResponse(
         question=question,
         answer=answer,
         files=[Path(p).name for p in saved],
+        amount_checks=checks,
+        amount_notice=_amount_notice(answer, checks),
     )
 
 

@@ -9,6 +9,8 @@ class ContractAnalyzeResponse(BaseModel):
     question: str
     answer: str
     files: List[str]
+    amount_checks: List[Dict[str, Any]] = Field(default_factory=list)
+    amount_notice: str = ''
 
 
 class HealthResponse(BaseModel):

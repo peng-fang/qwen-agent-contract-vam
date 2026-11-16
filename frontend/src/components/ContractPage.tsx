@@ -31,6 +31,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
   const [files, setFiles] = useState<File[]>([])
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
+  const [amountNotice, setAmountNotice] = useState('')
   const [resultFiles, setResultFiles] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchText, setSearchText] = useState('')
@@ -51,6 +52,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
   async function run() {
     setError('')
     setAnswer('')
+    setAmountNotice('')
     setMatches([])
     setResultFiles([])
     if (!question.trim()) {
@@ -65,6 +67,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
     try {
       const res = await analyzeContract(question, files)
       setAnswer(res.answer)
+      setAmountNotice(res.amount_notice || '')
       setResultFiles(res.files)
       setSelectedIndex(0)
     } catch (e) {
@@ -163,7 +166,14 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
               </Button>
               {error && <div className="text-sm text-red-600">{error}</div>}
               {answer && (
-                <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">{answer}</pre>
+                <div className="space-y-2">
+                  {amountNotice && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      {amountNotice}
+                    </div>
+                  )}
+                  <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">{answer}</pre>
+                </div>
               )}
             </CardContent>
             </Card>

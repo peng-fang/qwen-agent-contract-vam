@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from clause_extraction import (  # noqa: E402
+    CLAUSE_LABELS,
     DocRole,
     analyze_documents,
     document_id_for,
@@ -68,6 +69,30 @@ def extract_clauses(
     return bundle.to_dict()
 
 
+def inspect_amounts(specs: Sequence[Tuple[str, str]]) -> List[Dict[str, Any]]:
+    """合同问答前的确定性金额条件核验。
+
+    specs: [(落盘路径, 原始文件名)]；只返回有金额条款（退款/违约金）的检查结果。
+    """
+    documents = []
+    for path, original_name in specs:
+        role = infer_role(original_name)
+        if role == DocRole.UNKNOWN:
+            role = DocRole.CONTRACT
+        documents.append(_load_registered(path, original_name, role))
+    bundle = analyze_documents(documents)
+    return [
+        {
+            'clause_type': match.clause_type.value,
+            'clause_label': CLAUSE_LABELS[match.clause_type],
+            'verdict': match.verdict.value,
+            **match.amount,
+        }
+        for match in bundle.matches
+        if match.amount is not None
+    ]
+
+
 def compare_versions(
     old_spec: Tuple[str, str],
     new_spec: Tuple[str, str],
@@ -84,6 +109,7 @@ def resolve_evidence(evidence_id: str) -> Dict[str, Any]:
 
 __all__ = [
     'extract_clauses',
+    'inspect_amounts',
     'compare_versions',
     'resolve_evidence',
     'DocumentReadError',

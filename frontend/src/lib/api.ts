@@ -116,10 +116,13 @@ export async function analyzeContract(question: string, files: File[]) {
   const form = new FormData()
   form.append('question', question)
   files.forEach((f) => form.append('files', f))
-  const res = await axios.post<{ question: string; answer: string; files: string[] }>(
-    '/api/contract/analyze',
-    form,
-  )
+  const res = await axios.post<{
+    question: string
+    answer: string
+    files: string[]
+    amount_checks: (AmountCheck & { clause_type: string; clause_label: string })[]
+    amount_notice: string
+  }>('/api/contract/analyze', form)
   return res.data
 }
 
@@ -375,6 +378,41 @@ export interface ClauseSide {
   evidences: ClauseEvidence[]
 }
 
+export type AmountStatus =
+  | 'applicable'
+  | 'conditional'
+  | 'insufficient'
+  | 'not_applicable'
+  | 'no_amount'
+
+export interface AmountCondition {
+  condition: string
+  met: boolean | null
+  evidence_id: string
+  quote: string
+}
+
+export interface AmountScenario {
+  label: string
+  condition: string
+  amount: number | null
+  formula: string
+  applicable: boolean | null
+  missing: string[]
+  evidence_ids: string[]
+}
+
+export interface AmountCheck {
+  status: AmountStatus
+  status_label: string
+  reason?: string
+  basis: AmountCondition[]
+  scenarios: AmountScenario[]
+  missing: string[]
+  method: string
+  note?: string
+}
+
 export interface ClauseMatch {
   clause_type: ClauseType
   clause_label: string
@@ -386,6 +424,7 @@ export interface ClauseMatch {
   promo: ClauseSide | null
   contract: ClauseSide | null
   compared: Record<string, unknown>
+  amount?: AmountCheck | null
 }
 
 export interface EvidenceReviewFailure {
