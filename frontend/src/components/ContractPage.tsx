@@ -3,9 +3,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { analyzeContract, searchEvidence, type EvidenceMatch, type VamEvidenceInput } from '@/lib/api'
+import { analyzeContract, searchEvidence, type EvidenceMatch, type RentalRisk, type VamEvidenceInput } from '@/lib/api'
 import { BrandLogo } from './BrandLogo'
+import { AskAssistantDrawer } from './AskAssistantDrawer'
 import { PdfViewer } from './PdfViewer'
+import { RentalReviewPanel, type AskRiskContext } from './RentalReviewPanel'
 
 const PLUGINS = [
   { name: 'contract-calculate_refund', desc: '退款金额计算' },
@@ -35,6 +37,9 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
   const [matches, setMatches] = useState<EvidenceMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantContext, setAssistantContext] = useState<AskRiskContext | null>(null)
+  const [assistantRisks, setAssistantRisks] = useState<RentalRisk[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
   const questionRef = useRef<HTMLTextAreaElement>(null)
 
@@ -89,6 +94,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
 
   function chooseSuggestion(text: string) {
     setQuestion(text)
+    setAssistantOpen(false)
     questionRef.current?.focus()
   }
 
@@ -112,11 +118,21 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
         </CardContent>
       </Card>
 
+      <RentalReviewPanel
+        files={files}
+        onAsk={(context, risks) => {
+          setAssistantContext(context)
+          setAssistantRisks(risks)
+          setAssistantOpen(true)
+        }}
+      />
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_890px]">
         <div className="space-y-6">
-          <Card>
+          <div>
+            <Card>
             <CardHeader>
-              <CardTitle>上传材料</CardTitle>
+              <CardTitle>上传材料与提问</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <input
@@ -137,6 +153,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
               )}
               <Textarea
                 ref={questionRef}
+                rows={7}
                 placeholder="例如：请核验退款承诺，并引用原文和页码。"
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
@@ -149,7 +166,8 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">{answer}</pre>
               )}
             </CardContent>
-          </Card>
+            </Card>
+          </div>
 
           <Card>
             <CardHeader>
@@ -249,6 +267,14 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
           </CardContent>
         </Card>
       </div>
+
+      <AskAssistantDrawer
+        open={assistantOpen}
+        context={assistantContext}
+        risks={assistantRisks}
+        files={files}
+        onClose={() => setAssistantOpen(false)}
+      />
     </div>
   )
 }

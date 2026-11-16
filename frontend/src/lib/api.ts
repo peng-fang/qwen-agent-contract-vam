@@ -123,6 +123,172 @@ export async function analyzeContract(question: string, files: File[]) {
   return res.data
 }
 
+export type RentalRegion = 'mainland' | 'hongkong'
+export type RentalContractType =
+  | 'auto'
+  | 'rental'
+  | 'consumer'
+  | 'procurement'
+  | 'labor'
+  | 'loan'
+  | 'ecommerce'
+  | 'franchise'
+  | 'dispute'
+
+export interface RentalLegalBasis {
+  article_id: string
+  article: string
+  title: string
+  summary: string
+  source: string
+  source_url: string
+  jurisdiction: RentalRegion
+  contract_types: string[]
+  source_type?: 'local' | 'official_web' | 'unknown'
+  verified?: boolean
+  retrieved_at?: string | null
+  note: string
+  matched_keywords: string[]
+}
+
+export interface RentalRisk {
+  risk_id: string
+  title: string
+  risk_type: string
+  severity: 'high' | 'medium' | 'low'
+  clause_ids: string[]
+  page: number | null
+  quote: string
+  explanation: string
+  suggestion: string
+  legal_basis: RentalLegalBasis[]
+  confidence: number
+  evidence_verified: boolean
+  status: 'supported' | 'needs_review' | 'rejected'
+  judge_reason: string
+  source: string
+}
+
+export interface RentalReviewResult {
+  filename: string
+  file_type: string
+  region: RentalRegion
+  region_label: string
+  contract_type: Exclude<RentalContractType, 'auto'>
+  contract_type_label: string
+  contract_type_requested: RentalContractType
+  classification: {
+    contract_type: Exclude<RentalContractType, 'auto'>
+    confidence: number
+    legal_domains: string[]
+    jurisdiction_hint: string
+    reason: string
+    source: string
+    known_type?: boolean
+  }
+  page_count: number
+  clause_count: number
+  facts: Record<string, unknown>
+  risks: RentalRisk[]
+  summary: {
+    risk_score: number
+    risk_level: 'high' | 'medium' | 'low'
+    risk_level_label: string
+    total_risks: number
+    high_count: number
+    medium_count: number
+    needs_review_count: number
+  }
+  agent_trace: { agent: string; status: string; detail: string }[]
+  warnings: string[]
+  disclaimer: string
+  cache_hit?: boolean
+}
+
+export async function reviewRentalContract(
+  file: File,
+  contractType: RentalContractType = 'rental',
+  region: RentalRegion = 'mainland',
+  useLlm = true,
+) {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('contract_type', contractType)
+  form.append('region', region)
+  form.append('use_llm', String(useLlm))
+  const res = await axios.post<RentalReviewResult>('/api/contract/rental-review', form, {
+    timeout: 300000,
+  })
+  return res.data
+}
+
+export interface RentalReviewProgress {
+  stage: string
+  status: 'running' | 'done' | 'warning'
+  detail: string
+}
+
+export async function reviewRentalContractStream(
+  file: File,
+  contractType: RentalContractType = 'rental',
+  region: RentalRegion = 'mainland',
+  useLlm = true,
+  onProgress?: (event: RentalReviewProgress) => void,
+  signal?: AbortSignal,
+): Promise<RentalReviewResult> {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('contract_type', contractType)
+  form.append('region', region)
+  form.append('use_llm', String(useLlm))
+
+  const response = await fetch('/api/contract/rental-review/stream', {
+    method: 'POST',
+    body: form,
+    signal,
+  })
+  if (!response.ok || !response.body) {
+    const text = await response.text().catch(() => '')
+    throw new Error(text || `请求失败（${response.status}）`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const blocks = buffer.split('\n\n')
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) {
+      const dataLine = block
+        .split('\n')
+        .find((line) => line.startsWith('data:'))
+      if (!dataLine) continue
+      const payload = JSON.parse(dataLine.slice(5).trim()) as {
+        type: string
+        stage?: string
+        status?: 'running' | 'done' | 'warning'
+        detail?: string
+        result?: RentalReviewResult
+      }
+      if (payload.type === 'progress' && payload.stage && payload.status) {
+        onProgress?.({
+          stage: payload.stage,
+          status: payload.status,
+          detail: payload.detail ?? '',
+        })
+      } else if (payload.type === 'result' && payload.result) {
+        return payload.result
+      } else if (payload.type === 'error') {
+        throw new Error(payload.detail || '审查失败')
+      }
+    }
+  }
+  throw new Error('审查流意外结束，请重试。')
+}
+
 export async function searchEvidence(filename: string, query: string) {
   const res = await axios.post<{ matches: EvidenceMatch[] }>('/api/evidence/search', {
     filename,
