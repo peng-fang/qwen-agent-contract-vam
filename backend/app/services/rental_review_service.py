@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 from rental_review import review_contract  # noqa: E402
 
 CACHE_DIR = ROOT / 'backend' / 'cache' / 'reviews'
-CACHE_VERSION = '10'
+CACHE_VERSION = '11'
 
 
 def _cache_enabled() -> bool:

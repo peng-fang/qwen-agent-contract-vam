@@ -134,6 +134,7 @@ export type RentalContractType =
   | 'ecommerce'
   | 'franchise'
   | 'dispute'
+  | 'other'
 
 export interface RentalLegalBasis {
   article_id: string

@@ -217,8 +217,29 @@ def test_unknown_contract_type_marked_unknown(tmp_path):
 第二条 具体内容另行协商。
 '''
     result = review_parsed(_parsed(tmp_path, text, 'unknown.txt'), use_llm=False, contract_type='auto')
+    assert result['contract_type'] == 'other'
     assert result['classification']['known_type'] is False
     assert result['classification']['confidence'] < 0.6
+
+
+def test_other_contract_uses_generic_rules(tmp_path):
+    text = '''其他服务协议
+第一条 甲方有权单方变更服务内容，无需提前通知。
+第二条 乙方应支付预付款，合同解除时不予退还。
+第三条 交付后三日内验收。
+第四条 违约金按合同总额的 30% 计算。
+'''
+    result = review_parsed(
+        _parsed(tmp_path, text, 'other.txt'),
+        use_llm=False,
+        contract_type='other',
+    )
+    assert result['contract_type'] == 'other'
+    assert result['contract_type_label'] == '其他/未识别'
+    assert result['classification']['known_type'] is False
+    risk_types = {risk['risk_type'] for risk in result['risks']}
+    assert 'unilateral_change' in risk_types
+    assert 'payment' in risk_types or 'penalty' in risk_types
 
 
 def test_progress_callback_reports_stages(tmp_path):
