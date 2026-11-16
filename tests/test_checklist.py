@@ -90,7 +90,7 @@ def test_checklist_recovers_topics_missed_by_generator(monkeypatch):
 
     monkeypatch.setattr(service, '_prioritize', prioritize)
     result = service.generate_checklist('承租人', filename='lease.pdf', content=b'placeholder')
-    assert len(result['items']) == 5
+    assert len(result['items']) >= 5
     exit_question = next(item for item in result['items'] if item['topic'] == 'exit')
     assert '抵扣违约金' in exit_question['question']
     assert [entry['id'] for entry in exit_question['evidence']] == ['S1', 'S2']
@@ -183,5 +183,42 @@ def test_checklist_qwen_only_asks_model_for_ambiguous(monkeypatch):
     assert model == 'qwen2.5:7b'
     assert calls == [['C2']]
     assert cards[0]['priority'] == 'must_confirm'
+    assert cards[1]['priority'] == 'reference'
+    assert warning is None
+
+
+def test_checklist_cascade_uses_qwen_for_low_intern_confidence(monkeypatch):
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.syspath_prepend(str(root / 'backend'))
+    from app.services import checklist_service as service
+
+    monkeypatch.setenv('CHECKLIST_PRIORITY_PROVIDER', 'cascade')
+    monkeypatch.setenv('CHECKLIST_INTERN_CONFIDENCE', '0.6')
+    cards = [
+        {'id': 'C1', 'title': '自动续费能否关闭', 'trigger': '到期前', 'consequence': '可能自动扣款',
+         'question': '如何关闭自动续费？', 'evidence': [{'quote': '到期自动续费12个月'}]},
+        {'id': 'C2', 'title': '一般沟通方式', 'trigger': '日常沟通', 'consequence': '影响日常联系',
+         'question': '如何联系？', 'evidence': [{'quote': '双方应保持沟通'}]},
+    ]
+    calls = []
+
+    def fake_intern(cards, role):
+        calls.append(('intern', [card['id'] for card in cards]))
+        cards[0]['priority'] = 'should_confirm'
+        cards[0]['priority_source'] = 'intern'
+        cards[0]['priority_confidence'] = 0.4
+        return 'Intern-Decision-2B'
+
+    def fake_qwen(cards, role):
+        calls.append(('qwen', [card['id'] for card in cards]))
+        cards[0]['priority'] = 'reference'
+        cards[0]['priority_source'] = 'qwen'
+        return 'qwen2.5:7b'
+
+    monkeypatch.setattr(service, '_call_intern_priority', fake_intern)
+    monkeypatch.setattr(service, '_call_qwen_priority', fake_qwen)
+    model, warning = service._prioritize(cards, '承租人')
+    assert calls == [('intern', ['C2']), ('qwen', ['C2'])]
+    assert model == 'Intern-Decision-2B + qwen2.5:7b'
     assert cards[1]['priority'] == 'reference'
     assert warning is None

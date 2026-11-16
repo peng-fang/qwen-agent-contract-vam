@@ -651,10 +651,33 @@ def _score_leaf(
     contract_text: str,
     scenario_text: str,
 ) -> Tuple[Dict[str, Any], str]:
-    provider = os.getenv('VAM_SCORER_PROVIDER', 'local').strip().lower() or 'local'
+    provider = os.getenv('VAM_SCORER_PROVIDER', 'cascade').strip().lower() or 'cascade'
     scorer = _scorer_config()
     if provider == 'intern':
         return _intern_score(contract_text, scenario_text)
+    if provider == 'cascade':
+        intern_result = None
+        try:
+            raw, text = _intern_score(contract_text, scenario_text)
+            intern_result = (raw, text)
+            normalized = normalize_scorer_result(raw)
+            try:
+                confidence_floor = float(os.getenv('VAM_INTERN_CONFIDENCE', '0.6'))
+            except ValueError:
+                confidence_floor = 0.6
+            confidence = normalized.get('confidence')
+            if normalized.get('status') == 'valid' and (
+                not isinstance(confidence, (int, float)) or confidence >= confidence_floor
+            ):
+                return raw, text
+        except Exception:
+            intern_result = None
+        try:
+            return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
+        except Exception:
+            if intern_result:
+                return intern_result
+            raise
     if provider == 'harness' or (provider == 'auto' and scorer['url']):
         return _harness_score(contract_text, scenario_text)
     return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)

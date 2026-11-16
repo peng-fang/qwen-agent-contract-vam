@@ -18,6 +18,14 @@ logger = logging.getLogger(__name__)
 
 MAX_SOURCE_CHARS = 24000
 MAX_SEGMENT_CHARS = 6000
+
+
+def _max_items():
+    try:
+        return max(5, int(os.getenv('CHECKLIST_MAX_ITEMS', '10')))
+    except ValueError:
+        return 10
+
 TOPICS = {'payment', 'exit', 'renewal', 'performance', 'liability', 'other'}
 PRIORITIES = ('must_confirm', 'should_confirm', 'reference')
 MUST_PATTERNS = (
@@ -55,7 +63,7 @@ SYSTEM = """你是签约前的条款分析助手。合同片段和用户立场�
 程序会按编号回填原文，你只需给编号。缺少明确约定时写成待确认事项，不可断言整个合同没有该约定。
 trigger 写何时会遇到这个条件，consequence 用条件句描述可能后果，不自行算金额、不作法律定性。
 question 是用户可以直接发给对方的一句具体问题，可请对方把约定写入合同。每个关注点只生成一条。
-输出简体中文 JSON，不超过五条，没有可支持的条目可返回空数组。
+输出简体中文 JSON，尽量 6–10 条，覆盖所有主题；没有可支持的条目可返回空数组。
 格式：{"items":[{"topic":"other","title":"具体待确认事项","trigger":"涉及的条件",
 "consequence":"相应的条件后果","question":"可以直接向对方提出的问题",
 "source_ids":["S1","S2"]}]}
@@ -113,7 +121,7 @@ def _cards(raw, segment):
     if not isinstance(entries, list):
         raise RuntimeError('模型没有返回有效的清单格式。')
     by_id = {entry['id']: entry for entry in segment}
-    for item in entries[:5]:
+    for item in entries[:_max_items() + 2]:
         if not isinstance(item, dict):
             continue
         fields = {name: _field(item.get(name), limit)
@@ -197,18 +205,88 @@ def _coverage_items(passages):
              'evidence': [_evidence(deductions[0])], 'priority': None},
         )
 
+    payments = _matching(passages, r'(?=.*(?:预付款|首付款|合同总价|价款|尾款))(?=.*(?:支付|付款|退还|不退))')
+    if payments:
+        yield (
+            r'预付款|首付款|尾款|付款|价款',
+            {'topic': 'payment', 'generic': True, 'title': '预付款、尾款和退款条件',
+             'trigger': '签约后付款或合同解除需要结算时。',
+             'consequence': '预付款或尾款可能已经支付，但退款、抵扣和结算顺序没有写清。',
+             'question': '预付款和尾款分别在什么条件下支付、什么情况下退还？合同解除时已付款项如何结算？',
+             'evidence': [_evidence(payments[0])], 'priority': None},
+        )
+
+    terminations = _matching(passages, r'(?=.*(?:解除|终止|退出|退租))(?=.*(?:通知|补偿|退款|结算|不退|扣))')
+    if terminations:
+        yield (
+            r'解除|终止|退出|退租',
+            {'topic': 'exit', 'generic': True, 'title': '提前解除或退出的通知与结算',
+             'trigger': '一方需要提前解除或退出合同时。',
+             'consequence': '解除条件、通知期、已付款项和未履行部分如何结算不明确，可能产生额外扣费。',
+             'question': '提前解除或退出需要提前多久通知？已付款项、未使用服务和违约金分别如何结算？',
+             'evidence': [_evidence(terminations[0])], 'priority': None},
+        )
+
+    acceptance = _matching(passages, r'(?=.*(?:验收|交付|安装))(?=.*(?:标准|期限|视为|合格|日内|工作日))')
+    if acceptance:
+        yield (
+            r'验收|交付|安装',
+            {'topic': 'performance', 'generic': True, 'title': '验收标准与逾期未验收的后果',
+             'trigger': '设备或服务交付、安装完成时。',
+             'consequence': '验收标准、验收期限和逾期未验收的后果不清，可能影响尾款和索赔。',
+             'question': '验收的具体标准是什么？多少天内验收？逾期未验收是否视为合格？',
+             'evidence': [_evidence(acceptance[0])], 'priority': None},
+        )
+
+    warranty = _matching(passages, r'(?=.*(?:质保|保修|维修))(?=.*(?:期限|范围|费用|不承担|排除|易耗))')
+    if warranty:
+        yield (
+            r'质保|保修|维修',
+            {'topic': 'performance', 'generic': True, 'title': '质保范围、期限和维修费用',
+             'trigger': '设备或服务出现故障、需要维修时。',
+             'consequence': '质保范围、期限和维修费用承担不清，可能把维修成本转给用户。',
+             'question': '质保期多长、覆盖哪些部件和故障？维修响应时间和费用由谁承担？',
+             'evidence': [_evidence(warranty[0])], 'priority': None},
+        )
+
+    changes = _matching(passages, r'(?=.*(?:变更|调整|替代))(?=.*(?:单方|有权|通知|价格|型号))')
+    if changes:
+        yield (
+            r'变更|调整|替代',
+            {'topic': 'performance', 'generic': True, 'title': '单方变更价格、型号或服务内容',
+             'trigger': '供应商调整价格、设备型号或服务范围时。',
+             'consequence': '一方可能单方面改变合同内容，用户缺少协商、拒绝或退出机制。',
+             'question': '价格、型号或服务内容变更需要谁同意？用户能否拒绝变更或解除合同？',
+             'evidence': [_evidence(changes[0])], 'priority': None},
+        )
+
+    disputes = _matching(passages, r'(?=.*(?:仲裁|管辖|诉讼|争议))(?=.*(?:法院|仲裁|香港|内地))')
+    if disputes:
+        yield (
+            r'仲裁|管辖|诉讼|争议',
+            {'topic': 'other', 'generic': True, 'title': '争议解决方式和管辖地',
+             'trigger': '双方发生争议时。',
+             'consequence': '仲裁与诉讼、管辖地和维权成本不清，可能增加解决争议的难度。',
+             'question': '争议由仲裁还是法院处理？具体机构和地点在哪里？律师费由谁承担？',
+             'evidence': [_evidence(disputes[0])], 'priority': None},
+        )
+
 
 def _ensure_coverage(candidates, passages):
     covered = []
     for pattern, fallback in _coverage_items(passages):
-        anchor = fallback['evidence'][0]['id']
-        candidate = next((item for item in candidates if item not in covered
-                          and re.search(pattern, item['title'] + item['question'])
-                          and (any(source['id'] == anchor for source in item['evidence'])
-                               or (fallback['topic'] == 'exit'
-                                   and any('押金' in source['quote'] for source in item['evidence'])))
-                          and (fallback['topic'] != 'exit' or any(
-                              '违约金' in source['quote'] for source in item['evidence']))), None)
+        if fallback.get('generic'):
+            candidate = next((item for item in candidates if item not in covered
+                              and item['topic'] == fallback['topic']), None)
+        else:
+            anchor = fallback['evidence'][0]['id']
+            candidate = next((item for item in candidates if item not in covered
+                              and re.search(pattern, item['title'] + item['question'])
+                              and (any(source['id'] == anchor for source in item['evidence'])
+                                   or (fallback['topic'] == 'exit'
+                                       and any('押金' in source['quote'] for source in item['evidence'])))
+                              and (fallback['topic'] != 'exit' or any(
+                                  '违约金' in source['quote'] for source in item['evidence']))), None)
         if candidate is None:
             candidate = fallback
             candidates.append(candidate)
@@ -289,9 +367,9 @@ def _call_qwen_priority(cards, role):
 
 
 def _prioritize(cards, role):
-    provider = os.getenv('CHECKLIST_PRIORITY_PROVIDER', 'qwen').strip().lower()
-    if provider not in {'rules', 'hybrid', 'intern', 'qwen'}:
-        provider = 'qwen'
+    provider = os.getenv('CHECKLIST_PRIORITY_PROVIDER', 'cascade').strip().lower()
+    if provider not in {'rules', 'hybrid', 'intern', 'qwen', 'cascade'}:
+        provider = 'cascade'
 
     if provider == 'intern':
         for card in cards:
@@ -306,6 +384,34 @@ def _prioritize(cards, role):
     if provider == 'rules' or not pending:
         warning = None if all(card['priority'] for card in cards) else '部分事项暂未定级，按生成顺序展示。'
         return '规则优先级', warning
+
+    if provider == 'cascade':
+        try:
+            intern_model = _call_intern_priority(pending, role)
+        except (requests.RequestException, TypeError, ValueError, AttributeError) as exc:
+            logger.warning('Intern priority unavailable, falling back to Qwen: %s', type(exc).__name__)
+            intern_model = None
+
+        try:
+            confidence_floor = float(os.getenv('CHECKLIST_INTERN_CONFIDENCE', '0.6'))
+        except ValueError:
+            confidence_floor = 0.6
+        needs_qwen = [
+            card for card in pending
+            if card.get('priority') is None
+            or card.get('priority_confidence') is None
+            or float(card['priority_confidence']) < confidence_floor
+        ]
+        qwen_model = None
+        if needs_qwen:
+            try:
+                qwen_model = _call_qwen_priority(needs_qwen, role)
+            except (requests.RequestException, TypeError, ValueError, AttributeError) as exc:
+                logger.warning('Qwen priority fallback unavailable: %s', type(exc).__name__)
+
+        models = [name for name in (intern_model, qwen_model) if name]
+        warning = None if all(card['priority'] for card in cards) else '部分事项暂未定级，按生成顺序展示。'
+        return ' + '.join(models) if models else '规则优先级', warning
 
     try:
         if provider == 'qwen':
@@ -369,7 +475,7 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
         prompt = f'用户身份：{role}\n\n' + '\n\n'.join(
             f'[{source["id"]}] {source["text"]}' for source in segment
         )
-        raw, _ = _generate_json(cfg, SYSTEM, prompt, temperature=0.1, max_tokens=2400)
+        raw, _ = _generate_json(cfg, SYSTEM, prompt, temperature=0.1, max_tokens=3600)
         for card in _cards(raw, segment):
             key = re.sub(r'[\W_]+', '', card['question']).casefold()
             if key and key not in seen:
@@ -387,10 +493,27 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
             warning = '优先级服务暂不可用，清单按生成顺序展示。'
     priority_order = {name: index for index, name in enumerate(PRIORITIES)}
     candidates.sort(key=lambda item: priority_order.get(item['priority'], len(PRIORITIES)))
-    # Keep an evidenced question for each recognized topic even if multiple
-    # higher-ranked questions happen to concern the same clause.
-    chosen = coverage + [card for card in candidates if card not in coverage][:5 - len(coverage)]
-    included = {card['id'] for card in chosen}
+    # 所有 must/should 都保留；reference 只用于补足数量，最多 CHECKLIST_MAX_ITEMS 条。
+    max_items = _max_items()
+    chosen = []
+    chosen_ids = set()
+
+    def add_card(card):
+        if card['id'] not in chosen_ids:
+            chosen_ids.add(card['id'])
+            chosen.append(card)
+
+    for card in coverage:
+        add_card(card)
+    for card in candidates:
+        if card['priority'] in {'must_confirm', 'should_confirm'}:
+            add_card(card)
+    for card in candidates:
+        if len(chosen) >= max_items:
+            break
+        if card['priority'] not in {'must_confirm', 'should_confirm'}:
+            add_card(card)
+    included = chosen_ids
     scope = '所选原文' if evidence else '所上传文件的可读取文本' if content is not None else '粘贴的条款'
     return {'items': [card for card in candidates if card['id'] in included],
             'priority_model': model, 'warning': warning, 'scope': scope,
