@@ -79,9 +79,18 @@ def priority(req: PriorityRequest) -> Dict[str, Any]:
         },
     }
     result = engine.predict(request)
+    answers = result.get('answers', {})
     return {
         'model': result.get('model', 'Intern-Decision-2B'),
-        'priorities': {item.id: result['answers'][item.id]['choice'] for item in req.items},
+        'priorities': {
+            item.id: (answers.get(item.id) or {}).get('choice', 'insufficient')
+            for item in req.items
+        },
+        'confidence': {
+            item.id: answers[item.id].get('confidence')
+            for item in req.items
+            if isinstance(answers.get(item.id), dict)
+        },
     }
 
 

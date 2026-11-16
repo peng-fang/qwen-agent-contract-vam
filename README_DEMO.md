@@ -13,6 +13,8 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 ```
 
 > Gradio 旧前端已移除；仓库只保留 React 前端和 FastAPI 后端。
+>
+> VAM 评分和清单优先级默认使用本地 Qwen；Intern-Decision 2B 保留为可选对照后端。
 
 ## 功能
 
@@ -56,7 +58,7 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 - 上传单份 PDF/TXT、粘贴条款，或带入核验原文。可选填用户身份；
 - Qwen 找出待确认事项，生成触发条件、可能后果和可直接复制的问题。后端按给定材料核对引文；
-- Intern-Decision 2B 对问题标注确认顺序，信息不足时可不定级；
+- 优先级默认 `CHECKLIST_PRIORITY_PROVIDER=qwen`：规则先排明显项，规则无法定级的模糊项交给本地 Qwen；`hybrid` 可改用 Intern-Decision 2B 只处理模糊项，`intern` 仅用于全量对照实验；
 - 支持在适用卡片中填写已确认的参数，估算回购或提前退租的条件金额。
 
 验收时打开“签约前必问清单”，选择“填入租赁示例”，再生成清单。查看押金与违约金问题的原文、复制问题并试算。押金 5000 元、违约金 10000 元、其他费用为 0 且无上限时，叠加与抵扣分别为 15000 元和 10000 元。
