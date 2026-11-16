@@ -7,7 +7,7 @@ export type Priority = 'must_confirm' | 'should_confirm' | 'reference'
 export type Source = { id: string; filename: string; page: number | null; kind: 'pdf' | 'text'; quote: string }
 export type ChecklistItem = {
   id: string; title: string; trigger: string; consequence: string; question: string; topic: string
-  priority: Priority | null; evidence: Source[]
+  priority: Priority | null; evidence: Source[]; priority_source?: 'rule' | 'intern' | null; priority_confidence?: number | null
 }
 export type ChecklistResult = {
   items: ChecklistItem[]; priority_model: string | null; warning: string | null; scope: string; source_count: number

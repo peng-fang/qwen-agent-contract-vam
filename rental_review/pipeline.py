@@ -46,6 +46,7 @@ CONTRACT_TYPES = {
     'ecommerce': '消费/电商',
     'franchise': '加盟/特许经营',
     'dispute': '争议解决',
+    'other': '其他/未识别',
 }
 DEFAULT_CONTRACT_TYPE = 'rental'
 
@@ -127,16 +128,17 @@ CLASSIFY_SYSTEM = """你是「签之前」的合同分类 Agent。请根据合�
 - ecommerce：消费/电商
 - franchise：加盟/特许经营
 - dispute：争议解决条款（如果合同主要是争议解决条款）
+- other：无法归入以上类型的其他合同
 
 输出：
 {
-  "contract_type": "rental|consumer|procurement|labor|loan|ecommerce|franchise|dispute",
+  "contract_type": "rental|consumer|procurement|labor|loan|ecommerce|franchise|dispute|other",
   "confidence": 0.0,
   "legal_domains": ["例如：租赁合同", "押金", "违约责任"],
   "jurisdiction_hint": "mainland|hongkong|unknown",
   "reason": "一句话说明判断依据"
 }
-如果无法判断，contract_type 填 rental 之外的值会失败，所以请选择最接近的类型并降低 confidence。
+如果无法判断，请输出 other，并说明不确定原因；不要硬塞进某个已知类型。
 """
 
 
@@ -536,6 +538,46 @@ def _rule_risk_candidates(parsed: ParsedContract, contract_type: str = 'rental')
                           '律师费、保全费、公证费等维权成本由谁承担不清。',
                           '要求写明费用承担规则和合理上限。'))
 
+    elif contract_type == 'other':
+        def generic_kw(*options: str) -> str:
+            return next((item for item in options if item in text), options[-1])
+
+        change = generic_kw('单方变更', '有权变更', '另行通知', '调整价格', '有权调整')
+        if change in text:
+            rules.append(('单方变更权缺少限制', 'unilateral_change', change, 'high',
+                          '一方可单方面变更价格、服务或履行方式，相对方缺少协商和退出机制。',
+                          '要求限定变更情形、提前通知、书面确认和解除权。'))
+        termination = generic_kw('单方解除', '随时解除', '立即解除', '无需通知')
+        if termination in text:
+            rules.append(('单方解除权缺少限制', 'termination', termination, 'high',
+                          '一方可单方面解除，但未约定通知期、已履行部分结算和损失补偿。',
+                          '要求限定解除情形，并写明通知期、结算和补偿。'))
+        prepay = generic_kw('预付款', '定金', '不予退还', '退款')
+        if prepay in text:
+            rules.append(('预付款/退款条件不明确', 'payment', prepay, 'high',
+                          '预付款、定金或退款条件不清，解除或履行失败时可能无法收回款项。',
+                          '要求写明退款条件、扣费项目、退还期限和违约责任。'))
+        acceptance = generic_kw('验收', '交付')
+        if acceptance in text:
+            rules.append(('交付/验收标准不明确', 'acceptance', acceptance, 'medium',
+                          '交付物、验收标准和异议期限不清，容易产生尾款和违约争议。',
+                          '要求写明交付标准、验收期限、异议方式和视为验收规则。'))
+        penalty = generic_kw('违约金', '罚款')
+        if penalty in text:
+            rules.append(('违约责任可能过高或过低', 'penalty', penalty, 'medium',
+                          '违约金计算基数、上限和损失赔偿关系不清，可能显失公平。',
+                          '要求写明违约金计算方式、上限和与实际损失的关系。'))
+        forum = generic_kw('仲裁', '法院', '管辖')
+        if forum in text:
+            rules.append(('争议解决条款需要确认', 'jurisdiction', forum, 'medium',
+                          '仲裁/法院管辖、机构或地点不清，可能导致争议解决成本增加。',
+                          '要求只保留一种争议解决方式，并写明机构或法院。'))
+        notice = generic_kw('视为送达', '通知')
+        if notice in text:
+            rules.append(('通知送达条款可能过宽', 'notice', notice, 'medium',
+                          '通知方式、送达地址或视为送达条件不清，可能错过异议期限。',
+                          '要求写明送达地址、变更通知和合理送达期限。'))
+
     # 通用格式条款风险：所有合同类型都适用
     for marker in ('概不负责', '一切责任', '最终解释权', '不得异议'):
         if marker in text:
@@ -751,6 +793,38 @@ def _cross_clause_candidates(parsed: ParsedContract, contract_type: str = 'renta
                 'source': 'cross_rule',
             })
 
+    if contract_type == 'other':
+        termination = [c for c in parsed.clauses if any(k in c.text for k in ('解除', '终止'))]
+        payment = [c for c in parsed.clauses if any(k in c.text for k in ('付款', '退款', '预付款', '定金'))]
+        if termination and payment:
+            results.append({
+                'clause_ids': [termination[0].clause_id, payment[0].clause_id],
+                'title': '解除与退款/结算条款未对应',
+                'risk_type': 'cross_clause',
+                'quote': _sentence_for(termination[0].text, '解除' if '解除' in termination[0].text else '终止'),
+                'explanation': '合同约定解除/终止，但没有说清已付款项、未履行部分和服务费如何结算。',
+                'suggestion': '要求写明解除后的退款比例、扣费项目和结算期限。',
+                'severity': 'high',
+                'legal_keywords': ['解除', '退款', '结算'],
+                'confidence': 0.75,
+                'source': 'cross_rule',
+            })
+        arbitration = [c for c in parsed.clauses if '仲裁' in c.text]
+        court = [c for c in parsed.clauses if '法院' in c.text or '诉讼' in c.text]
+        if arbitration and court:
+            results.append({
+                'clause_ids': [arbitration[0].clause_id, court[0].clause_id],
+                'title': '仲裁与诉讼条款可能冲突',
+                'risk_type': 'cross_clause',
+                'quote': _sentence_for(arbitration[0].text, '仲裁'),
+                'explanation': '不同条款分别约定仲裁和法院诉讼，争议解决方式可能不明确。',
+                'suggestion': '只保留一种争议解决方式，并写明机构或法院。',
+                'severity': 'high',
+                'legal_keywords': ['仲裁', '法院', '管辖'],
+                'confidence': 0.8,
+                'source': 'cross_rule',
+            })
+
     return results
 
 
@@ -880,14 +954,24 @@ def _rule_classify(parsed: ParsedContract) -> Dict[str, Any]:
         if hits:
             domains.extend(hits[:4])
     best_type, best_score = max(scores.items(), key=lambda item: item[1])
+    second_score = sorted(scores.values(), reverse=True)[1] if len(scores) > 1 else 0
+    try:
+        min_score = max(1, int(os.getenv('AUTO_OTHER_MIN_SCORE', '2')))
+        margin = max(0, int(os.getenv('AUTO_OTHER_MARGIN', '1')))
+    except ValueError:
+        min_score, margin = 2, 1
+    ambiguous = (
+        best_score < min_score
+        or (best_score < 4 and best_score - second_score <= margin)
+    )
     total = sum(scores.values())
     confidence = round(min(0.9, 0.3 + best_score / max(1, total)), 2) if best_score else 0.25
     return {
-        'contract_type': best_type if best_score else 'rental',
-        'confidence': confidence,
+        'contract_type': 'other' if ambiguous else best_type,
+        'confidence': 0.25 if ambiguous else confidence,
         'legal_domains': list(dict.fromkeys(domains))[:6],
         'jurisdiction_hint': 'unknown',
-        'reason': '规则关键词分类（模型不可用或未启用）',
+        'reason': '规则未能稳定匹配已知合同类型' if ambiguous else '规则关键词分类（模型不可用或未启用）',
         'source': 'rules',
     }
 
@@ -992,7 +1076,9 @@ def review_parsed(
         known_threshold = float(os.getenv('LEGAL_WEB_KNOWN_CONFIDENCE', '0.6'))
     except ValueError:
         known_threshold = 0.6
-    known_type = requested_type != 'auto' or float(classification.get('confidence') or 0) >= known_threshold
+    known_type = contract_type != 'other' and (
+        requested_type != 'auto' or float(classification.get('confidence') or 0) >= known_threshold
+    )
     classification['known_type'] = known_type
     trace = [
         {'agent': '合同解析', 'status': 'done', 'detail': f'读取 {len(parsed.pages)} 页，切分 {len(parsed.clauses)} 条条款。'},
@@ -1059,10 +1145,13 @@ def review_parsed(
     web_count = 0
     _emit(progress, 'legal', 'running', '本地法律检索与官方网页兜底运行中。')
 
+    domain_text = ' '.join(str(item) for item in (classification.get('legal_domains') or []))
+
     def legal_query(candidate: Dict[str, Any]) -> str:
         return ' '.join([
             candidate.get('title', ''), candidate.get('explanation', ''),
             candidate.get('quote', ''), ' '.join(candidate.get('legal_keywords') or []),
+            domain_text,
         ]).strip()
 
     # 本地检索很快，先全部做完；只对缺依据的风险并发做官方网页兜底。

@@ -148,6 +148,9 @@ const FACT_LABELS_BY_TYPE: Record<ResolvedContractType, Record<string, string>> 
     delivery: '通知送达',
     repair: '费用承担',
   },
+  other: {
+    ...BASE_FACT_LABELS,
+  },
 }
 
 const CONTRACT_TYPE_LABELS: Record<RentalContractType, string> = {
@@ -160,6 +163,7 @@ const CONTRACT_TYPE_LABELS: Record<RentalContractType, string> = {
   ecommerce: '消费/电商',
   franchise: '加盟/特许经营',
   dispute: '争议解决',
+  other: '其他/未识别',
 }
 
 function RiskCard({
@@ -514,6 +518,11 @@ export function RentalReviewPanel({
             {result.classification.legal_domains.length > 0 && (
               <div className="text-xs text-muted-foreground">
                 识别到的法律领域：{result.classification.legal_domains.join('、')}
+              </div>
+            )}
+            {result.contract_type === 'other' && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                未能确定合同类型，当前按“其他合同”做通用风险审查。建议在上方手动选择类型，或补充更明确的合同标题与条款。
               </div>
             )}
             <div className="grid gap-3 rounded-lg border border-border bg-muted/30 p-4 md:grid-cols-4">

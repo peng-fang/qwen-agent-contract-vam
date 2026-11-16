@@ -1,4 +1,4 @@
-"""合同核验相关路由。"""
+﻿"""合同核验相关路由。"""
 
 import asyncio
 import json
@@ -66,7 +66,7 @@ async def rental_review(
         raise HTTPException(status_code=400, detail='region 只支持 mainland 或 hongkong')
 
     contract_type = (contract_type or 'rental').strip().lower()
-    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'auto'}:
+    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'other', 'auto'}:
         raise HTTPException(status_code=400, detail='不支持的 contract_type')
 
     suffix = Path(file.filename).suffix.lower()
@@ -110,7 +110,7 @@ async def rental_review_stream(
         raise HTTPException(status_code=400, detail='region 只支持 mainland 或 hongkong')
 
     contract_type = (contract_type or 'rental').strip().lower()
-    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'auto'}:
+    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'other', 'auto'}:
         raise HTTPException(status_code=400, detail='不支持的 contract_type')
 
     suffix = Path(file.filename).suffix.lower()

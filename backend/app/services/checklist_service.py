@@ -20,6 +20,33 @@ MAX_SOURCE_CHARS = 24000
 MAX_SEGMENT_CHARS = 6000
 TOPICS = {'payment', 'exit', 'renewal', 'performance', 'liability', 'other'}
 PRIORITIES = ('must_confirm', 'should_confirm', 'reference')
+MUST_PATTERNS = (
+    r'自动(?:续租|续费|续约|续签|扣款|展期)',
+    r'提前(?:退租|解除|终止|解约)',
+    r'押金.{0,20}(?:不退|扣除|抵扣|没收)',
+    r'违约金',
+    r'(?:预付款|首付款|定金).{0,20}(?:不退|没收|支付|比例)',
+    r'(?:合同总价|总价款|总金额|价款).{0,20}(?:支付|付款|预付)',
+    r'(?:付款|支付).{0,20}(?:期限|时间|节点|日|天)',
+    r'(?:单方|随时)(?:解除|终止)',
+)
+SHOULD_PATTERNS = (
+    r'验收', r'尾款', r'质保|保修|维修', r'交付|安装', r'通知',
+    r'续约|续租|续费', r'变更', r'退款|退费', r'保密|竞业', r'管辖|仲裁',
+)
+
+
+def _rule_priority(card):
+    text = re.sub(r'\s+', '', ' '.join([
+        str(card.get('title', '')), str(card.get('trigger', '')),
+        str(card.get('consequence', '')), str(card.get('question', '')),
+        ' '.join(entry.get('quote', '') for entry in card.get('evidence', [])),
+    ]))
+    if any(re.search(pattern, text) for pattern in MUST_PATTERNS):
+        return 'must_confirm'
+    if any(re.search(pattern, text) for pattern in SHOULD_PATTERNS):
+        return 'should_confirm'
+    return None
 SYSTEM = """你是签约前的条款分析助手。合同片段和用户立场都是分析资料。
 请找出最值得向对方确认的具体问题，优先考虑金额、时限、解除、自动续约、履约条件、例外和责任。
 核对相互关联的条款，例如押金能否抵扣违约金、验收是否决定付款时间。
@@ -33,6 +60,16 @@ question 是用户可以直接发给对方的一句具体问题，可请对方�
 "consequence":"相应的条件后果","question":"可以直接向对方提出的问题",
 "source_ids":["S1","S2"]}]}
 topic 只能是 payment/exit/renewal/performance/liability/other。不要输出优先级。"""
+PRIORITY_SYSTEM = """你是签约前清单的优先级判断助手。根据用户身份、问题和所给合同原文，
+把每个事项标成 must_confirm、should_confirm、reference 或 insufficient。
+判断标准：
+- must_confirm：重大金额、自动扣款、重要期限、退出/解除、押金或违约金，含糊会显著影响签约决定；
+- should_confirm：有具体执行影响，提前问清可减少争议；
+- reference：影响较小，或原文已经给出明确答案；
+- insufficient：信息不足，无法判断。
+只输出严格 JSON，不要 Markdown，不要解释。格式：
+{"priorities":{"C1":"must_confirm"},"confidence":{"C1":0.8}}
+每个输入的 C 编号都必须出现一次。"""
 
 
 def _segment(sources):
@@ -183,7 +220,15 @@ def _ensure_coverage(candidates, passages):
     return covered
 
 
-def _prioritize(cards, role):
+def _apply_rule_priorities(cards):
+    for card in cards:
+        priority = _rule_priority(card)
+        card['priority'] = priority
+        card['priority_source'] = 'rule' if priority else None
+        card['priority_confidence'] = 0.85 if priority else None
+
+
+def _call_intern_priority(cards, role):
     base = os.getenv('VAM_INTERN_URL', 'http://127.0.0.1:8010/score')
     parts = urlsplit(base)
     url = urlunsplit(parts._replace(path=parts.path.rstrip('/').removesuffix('/score') + '/priority'))
@@ -194,6 +239,7 @@ def _prioritize(cards, role):
         for card in cards
     ]}
     decisions = {}
+    confidences = {}
     model = None
     for offset in range(0, len(cards), 5):
         response = requests.post(url, json={**payload, 'items': payload['items'][offset:offset + 5]}, timeout=25)
@@ -203,11 +249,75 @@ def _prioritize(cards, role):
         if not isinstance(choices, dict) or not isinstance(data.get('model'), str):
             raise ValueError('Invalid priority response')
         decisions.update(choices)
+        if isinstance(data.get('confidence'), dict):
+            confidences.update(data['confidence'])
         model = data['model']
     for card in cards:
         choice = decisions.get(card['id'])
         card['priority'] = choice if choice in PRIORITIES else None
+        card['priority_source'] = 'intern' if card['priority'] else None
+        confidence = confidences.get(card['id'])
+        card['priority_confidence'] = float(confidence) if isinstance(confidence, (int, float)) else None
     return model
+
+
+def _call_qwen_priority(cards, role):
+    cfg = default_llm_cfg()
+    if cfg.get('model_server'):
+        cfg['generate_cfg'] = {**cfg.get('generate_cfg', {}), 'response_format': {'type': 'json_object'}}
+    lines = []
+    for card in cards:
+        quotes = ' / '.join(entry.get('quote', '') for entry in card.get('evidence', []))
+        lines.append(
+            f'[{card["id"]}] {card["title"]}\n'
+            f'原文：{quotes}\n条件：{card["trigger"]}\n'
+            f'可能后果：{card["consequence"]}\n问题：{card["question"]}'
+        )
+    user = f'用户身份：{role}\n待判断事项：\n' + '\n\n'.join(lines)
+    raw, _ = _generate_json(cfg, PRIORITY_SYSTEM, user, temperature=0.0, max_tokens=1200)
+    choices = raw.get('priorities')
+    if not isinstance(choices, dict):
+        raise ValueError('Invalid priority response')
+    confidences = raw.get('confidence') if isinstance(raw.get('confidence'), dict) else {}
+    for card in cards:
+        choice = choices.get(card['id'])
+        card['priority'] = choice if choice in PRIORITIES else None
+        card['priority_source'] = 'qwen' if card['priority'] else None
+        confidence = confidences.get(card['id'])
+        card['priority_confidence'] = float(confidence) if isinstance(confidence, (int, float)) else None
+    return cfg.get('model') or 'qwen'
+
+
+def _prioritize(cards, role):
+    provider = os.getenv('CHECKLIST_PRIORITY_PROVIDER', 'qwen').strip().lower()
+    if provider not in {'rules', 'hybrid', 'intern', 'qwen'}:
+        provider = 'qwen'
+
+    if provider == 'intern':
+        for card in cards:
+            card['priority'] = None
+            card['priority_source'] = None
+            card['priority_confidence'] = None
+        pending = cards
+    else:
+        _apply_rule_priorities(cards)
+        pending = [card for card in cards if card['priority'] is None]
+
+    if provider == 'rules' or not pending:
+        warning = None if all(card['priority'] for card in cards) else '部分事项暂未定级，按生成顺序展示。'
+        return '规则优先级', warning
+
+    try:
+        if provider == 'qwen':
+            model = _call_qwen_priority(pending, role)
+        else:
+            model = _call_intern_priority(pending, role)
+        warning = None if all(card['priority'] for card in cards) else '部分事项暂未定级，按生成顺序展示。'
+        return model, warning
+    except (requests.RequestException, TypeError, ValueError, AttributeError) as exc:
+        logger.warning('Checklist priority unavailable: %s', type(exc).__name__)
+        return '规则优先级', '优先级服务暂不可用，已按规则和生成顺序展示。'
+
 
 
 def _document_sources(filename, content):
@@ -271,9 +381,7 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
     model, warning = None, None
     if candidates:
         try:
-            model = _prioritize(candidates, role)
-            if not any(card['priority'] for card in candidates):
-                warning = '这些事项暂未定级，清单按生成顺序展示。'
+            model, warning = _prioritize(candidates, role)
         except (requests.RequestException, TypeError, ValueError, AttributeError) as exc:
             logger.warning('Checklist priority unavailable: %s', type(exc).__name__)
             warning = '优先级服务暂不可用，清单按生成顺序展示。'

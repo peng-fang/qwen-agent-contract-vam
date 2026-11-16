@@ -19,10 +19,24 @@ LEASE = {
 VALID = {'risk_score': 8, 'feasibility_score': 4, 'loss_score': 3, 'confidence': 0.8}
 
 
-def test_intern_is_default_and_model_name_survives(monkeypatch):
+def test_local_qwen_is_default_scorer(monkeypatch):
+    monkeypatch.delenv('VAM_SCORER_PROVIDER', raising=False)
+
+    def generate(cfg, system, user, **kwargs):
+        assert '本地 Qwen 校准' in system
+        return {'risk_score': 7, 'feasibility_score': 5, 'loss_score': 6, 'confidence': 0.7, 'evidence': '测试'}, ''
+
+    monkeypatch.setattr(pipeline, '_generate_json', generate)
+    raw, _ = pipeline._score_leaf({'model': 'qwen2.5:7b'}, '合同原文', '情景')
+    assert raw['scorer_model'] == 'qwen2.5:7b'
+    assert raw['feasibility_score'] == 5
+
+
+def test_intern_scorer_option_and_model_name_survives(monkeypatch):
     from vam_sandbox.render import render_markdown_report
 
     monkeypatch.delenv('VAM_SCORER_PROVIDER', raising=False)
+    monkeypatch.setenv('VAM_SCORER_PROVIDER', 'intern')
     inputs = []
 
     class Response:
