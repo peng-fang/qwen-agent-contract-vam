@@ -13,6 +13,8 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 ```
 
 > Gradio 旧前端已移除；仓库只保留 React 前端和 FastAPI 后端。
+>
+> VAM 评分和清单优先级默认采用级联：Intern-Decision 2B 快速决策，低置信度或失败时回退本地 Qwen；Intern 与 Qwen 均可单独配置。
 
 ## 功能
 
@@ -26,6 +28,23 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 > Word 支持来自 Qwen-Agent 的文档解析器（依赖 `python-docx`，已固定在 `requirements.txt`）。
 > 已用程序生成的 .docx 实测解析成功；但 `合同核验` 的完整回答仍需本地/远程模型。
+
+### 合同风险审查
+
+- 在“合同核验”页上传一份合同（PDF/DOCX/TXT）；
+- 支持“自动识别”合同类型，也可手动覆盖为：住宅租赁 / 健身培训 / 采购买卖 / 劳动合同 / 借款担保 / 消费电商 / 加盟特许经营 / 争议解决 / 其他未识别；
+- 无法稳定归入已知类型时，按“其他合同”做通用风险审查（格式条款、单方变更/解除、付款退款、验收、违约、争议解决），并提示人工确认类型；
+- 开始前可选择法域：**中国内地** 或 **中国香港**，两套法律依据不混用；
+- 条款理解 Agent 抽取价款、押金、期限、续约、解除、违约金、验收/维修等事实；
+- 风险审查 Agent 提出风险候选，必须带原文 quote；条款足够时要求 5–8 条；
+- 法律检索 Agent 先查本地条文要旨库：
+  - 内地：《民法典》、劳动合同法、消费者权益保护法、电子商务法、商业特许经营管理条例、仲裁法、民事诉讼法等；
+  - 香港：Cap. 7 业主与租客条例、Cap. 458 不合情理合约条例、Cap. 26 货品售卖条例、Cap. 163 放债人条例、Cap. 609 仲裁条例、Cap. 362 商品说明条例等；香港没有专门加盟披露法例，加盟条目会明确标注；
+- 本地库没有命中时，可通过官方域名白名单（gov.cn / npc.gov.cn / elegislation.gov.hk / hklii.hk 等）做官方网页检索兜底；结果标记“官方网页”并缓存，核验失败的转人工复核；
+- 交叉验证 Agent 检查押金/违约金叠加、验收/尾款、竞业/补偿、仲裁/诉讼冲突等组合风险；
+- Judge Agent 逐条质疑证据与法律依据，标记“证据支持 / 待人工复核 / 已驳回”；
+- 结果按 **高风险 → 中风险 → 低风险** 排序，高风险优先展示；
+- 风险卡片可直接“带着问题问助手”，保留原有对话核验入口。
 
 ### 宣传 vs 合同
 
@@ -53,7 +72,7 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 - 上传单份 PDF/TXT、粘贴条款，或带入核验原文。可选填用户身份；
 - Qwen 找出待确认事项，生成触发条件、可能后果和可直接复制的问题。后端按给定材料核对引文；
-- Intern-Decision 2B 对问题标注确认顺序，信息不足时可不定级；
+- 优先级默认 `CHECKLIST_PRIORITY_PROVIDER=cascade`：规则先排明显项，模糊项交给 Intern-Decision 2B；2B 置信度低时再由 Qwen 复核；`qwen`/`hybrid`/`intern` 保留为对照模式；
 - 支持在适用卡片中填写已确认的参数，估算回购或提前退租的条件金额。
 
 验收时打开“签约前必问清单”，选择“填入租赁示例”，再生成清单。查看押金与违约金问题的原文、复制问题并试算。押金 5000 元、违约金 10000 元、其他费用为 0 且无上限时，叠加与抵扣分别为 15000 元和 10000 元。
@@ -107,7 +126,7 @@ npm run dev
 
 | 场景 | 行为 |
 | --- | --- |
-| 没有 Ollama / DashScope，或评分服务不可用 | 条款对照、风险评分、证据复核、评测全部可用；依赖模型的接口不使用多级回退，返回 502 与中文提示（如“模型暂时未能生成可用情景，请检查模型服务后重试”），页面显示可读错误，不白屏 |
+| 没有 Ollama / DashScope，或评分服务不可用 | 条款对照、风险评分、证据复核、评测全部可用；情景评分默认 `cascade`（Intern 2B → 本地 Qwen），两者都不可用时接口返回 502 与中文提示（如“模型暂时未能生成可用情景，请检查模型服务后重试”），页面显示可读错误，不白屏 |
 | 后端停止、只托管前端静态文件 | 对照页给出「无法连接条款对照服务…请确认后端已在 8001 端口启动」的可读提示，控制台无未捕获异常 |
 
 > 开发模式下 Vite 会把 `/api` 代理到 `127.0.0.1:8001`；生产/离线模式下由 FastAPI 直接托管 `frontend/dist`。
@@ -130,6 +149,8 @@ frontend/
     VersionComparePage.tsx    # 合同版本对比
     ChecklistPage.tsx         # 签约前必问清单
     ChecklistEstimate.tsx     # 清单条件金额试算
+    RentalReviewPanel.tsx     # 合同风险审查（分类/法域/流式）
+    AskAssistantDrawer.tsx    # 带问题问助手
     CashflowPage.tsx          # ECharts 资金流（演示数据）
     PdfViewer.tsx
     EvidenceDrawer.tsx
@@ -139,15 +160,17 @@ frontend/
   vite.config.ts
 
 clause_extraction/            # 规则抽取、跨文档匹配、evidence_id、风险与版本对比
+rental_review/                # 合同类型识别、条款理解、风险审查、法律检索与 Judge
 vam_sandbox/                  # 两段式（发散 + 打分）推演流水线
 mcp_servers/contract_tools.py # 退款/租金计算 MCP 工具
-tests/                        # 条款、证据链、清单、VAM 树与新增能力回归测试
-eval_data/                    # 合成标注数据（50 组）
+tests/                        # 条款、证据链、清单、风险审查、VAM 树等回归测试
+eval_data/                    # 调参 50 组 + 独立留出 40 组
 scripts/build_eval_dataset.py # 重建合成数据
-scripts/eval_clauses.py       # 评测脚本（规则路径，真实跑分）
+scripts/eval_clauses.py       # 调参集评测脚本（规则路径，真实跑分）
+scripts/eval_heldout.py       # 独立留出集评测脚本
 scripts/smoke_api.py          # 端到端冒烟自检
 start.ps1 / start.bat         # 一键启动
-reports/                      # 评测报告与看板
+reports/                      # 评测报告与看板（含 eval_heldout_*）
 ```
 
 ## 评测（规则路径，真实跑分）
@@ -180,5 +203,5 @@ reports/                      # 评测报告与看板
 3. 条款对照与版本对比只支持可提取文本的 PDF / TXT / MD，不接受 .docx；Word 仅在 Qwen-Agent 的合同核验路径可用。扫描件需要 OCR。
 4. 资金流图当前是演示数据，尚未接后端现金流接口。
 5. 评测数据为合成模板数据，数字只代表规则路径在该数据集上的表现，不代表真实合同分布；改写子集只有 10 组，且规则是针对这批表达补充的。
-6. 清单与推演依赖本地或远程模型；未配置模型时这些页面会明确提示不可用。
+6. 清单与情景评分依赖本地或远程模型；未配置模型时清单页会明确提示不可用，情景推演只有后端接口、前端无页面。
 7. 结果仅用于风险提示，不构成法律或投资意见。

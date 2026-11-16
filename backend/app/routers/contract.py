@@ -1,15 +1,21 @@
-"""合同核验相关路由。"""
+﻿"""合同核验相关路由。"""
 
+import asyncio
+import json
+import queue
+import threading
 import uuid
 from pathlib import Path
 from typing import List
 
 import aiofiles
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from app.schemas import ContractAnalyzeResponse
+from app.schemas import ContractAnalyzeResponse, RentalReviewResponse
 from app.services.contract_service import analyze_contract
+from app.services import rental_review_service
 
 router = APIRouter(prefix='/api/contract', tags=['contract'])
 
@@ -41,4 +47,120 @@ async def analyze(
         question=question,
         answer=answer,
         files=[Path(p).name for p in saved],
+    )
+
+
+@router.post('/rental-review', response_model=RentalReviewResponse)
+async def rental_review(
+    file: UploadFile = File(...),
+    use_llm: bool = Form(True),
+    region: str = Form('mainland'),
+    contract_type: str = Form('rental'),
+):
+    """上传一份合同，返回多 Agent 风险审查报告。"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail='请上传一份合同')
+
+    region = (region or 'mainland').strip().lower()
+    if region not in {'mainland', 'hongkong'}:
+        raise HTTPException(status_code=400, detail='region 只支持 mainland 或 hongkong')
+
+    contract_type = (contract_type or 'rental').strip().lower()
+    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'other', 'auto'}:
+        raise HTTPException(status_code=400, detail='不支持的 contract_type')
+
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in {'.pdf', '.docx', '.txt', '.md'}:
+        raise HTTPException(status_code=400, detail='只支持 PDF、DOCX、TXT、MD 格式')
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    target = UPLOAD_DIR / f'{uuid.uuid4().hex}{suffix}'
+    data = await file.read()
+    async with aiofiles.open(target, 'wb') as out:
+        await out.write(data)
+
+    try:
+        result = await run_in_threadpool(
+            rental_review_service.run,
+            str(target),
+            Path(file.filename).name,
+            use_llm,
+            region,
+            contract_type,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    return RentalReviewResponse(**result)
+
+
+@router.post('/rental-review/stream')
+async def rental_review_stream(
+    file: UploadFile = File(...),
+    use_llm: bool = Form(True),
+    region: str = Form('mainland'),
+    contract_type: str = Form('rental'),
+):
+    """SSE 版本：推送解析、分类、规则、模型、法律检索和 Judge 阶段。"""
+    if not file.filename:
+        raise HTTPException(status_code=400, detail='请上传一份合同')
+
+    region = (region or 'mainland').strip().lower()
+    if region not in {'mainland', 'hongkong'}:
+        raise HTTPException(status_code=400, detail='region 只支持 mainland 或 hongkong')
+
+    contract_type = (contract_type or 'rental').strip().lower()
+    if contract_type not in {'rental', 'consumer', 'procurement', 'labor', 'loan', 'ecommerce', 'franchise', 'dispute', 'other', 'auto'}:
+        raise HTTPException(status_code=400, detail='不支持的 contract_type')
+
+    suffix = Path(file.filename).suffix.lower()
+    if suffix not in {'.pdf', '.docx', '.txt', '.md'}:
+        raise HTTPException(status_code=400, detail='只支持 PDF、DOCX、TXT、MD 格式')
+
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    target = UPLOAD_DIR / f'{uuid.uuid4().hex}{suffix}'
+    data = await file.read()
+    async with aiofiles.open(target, 'wb') as out:
+        await out.write(data)
+
+    events: queue.Queue = queue.Queue()
+
+    def progress(stage: str, status: str, detail: str = '') -> None:
+        events.put({'type': 'progress', 'stage': stage, 'status': status, 'detail': detail})
+
+    def worker() -> None:
+        try:
+            result = rental_review_service.run(
+                str(target),
+                Path(file.filename).name,
+                use_llm,
+                region,
+                contract_type,
+                progress=progress,
+            )
+            events.put({'type': 'result', 'result': result})
+        except Exception as exc:  # noqa: BLE001
+            events.put({'type': 'error', 'detail': str(exc)})
+        finally:
+            events.put(None)
+
+    threading.Thread(target=worker, name='rental-review-stream', daemon=True).start()
+
+    async def event_generator():
+        try:
+            while True:
+                item = await asyncio.to_thread(events.get)
+                if item is None:
+                    break
+                yield f"data: {json.dumps(item, ensure_ascii=False)}\n\n"
+        finally:
+            try:
+                target.unlink(missing_ok=True)
+            except OSError:
+                pass
+
+    return StreamingResponse(
+        event_generator(),
+        media_type='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
     )

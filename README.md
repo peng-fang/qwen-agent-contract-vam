@@ -15,7 +15,7 @@ limitations under the License.
 -->
 
 <!-- 课程项目入口：以下为本地新增内容，Qwen-Agent 原始 README 从下一节开始。 -->
-> # 签之前：合同签订agent
+> # 签之前：合同核验与签约准备助手
 >
 > 本仓库是 NLP / Agent 课程项目，基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent)（Apache-2.0）二次开发。
 >

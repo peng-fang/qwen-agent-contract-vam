@@ -116,6 +116,13 @@ SCORER_SYSTEM = """你是合同情景的实验评分 Agent。从给定用户立�
 }
 """
 
+LOCAL_SCORER_SYSTEM = SCORER_SYSTEM + """
+本地 Qwen 校准：
+- 三个分数必须输出 0~10 的数值，不要返回 null。
+- 信息不足时给中间值 5，并把 confidence 降到 0.3~0.5，在 evidence 中注明“按中间值估算，需人工复核”。
+- 同一情景的分数只做相对判断，不解释为概率。
+"""
+
 DEEPEN_SYSTEM = """你是一个"发散推演"Agent，负责沿某个已经选定的情景继续往下推演一层。
 
 你会收到合同原始输入、用户立场和一条已有前提的路径。请进一步区分外部事件。
@@ -619,7 +626,7 @@ def _local_score(
     max_tokens: int,
 ) -> Tuple[Dict[str, Any], str]:
     user = f'合同原文：{contract_text}\n待评估推演情景：{scenario_text}'
-    scores, raw = _generate_json(cfg, SCORER_SYSTEM, user, temperature=temperature, max_tokens=max_tokens)
+    scores, raw = _generate_json(cfg, LOCAL_SCORER_SYSTEM, user, temperature=temperature, max_tokens=max_tokens)
     return {**scores, 'scorer_model': cfg.get('model')}, raw
 
 
@@ -644,10 +651,33 @@ def _score_leaf(
     contract_text: str,
     scenario_text: str,
 ) -> Tuple[Dict[str, Any], str]:
-    provider = os.getenv('VAM_SCORER_PROVIDER', 'intern').strip().lower() or 'intern'
+    provider = os.getenv('VAM_SCORER_PROVIDER', 'cascade').strip().lower() or 'cascade'
     scorer = _scorer_config()
     if provider == 'intern':
         return _intern_score(contract_text, scenario_text)
+    if provider == 'cascade':
+        intern_result = None
+        try:
+            raw, text = _intern_score(contract_text, scenario_text)
+            intern_result = (raw, text)
+            normalized = normalize_scorer_result(raw)
+            try:
+                confidence_floor = float(os.getenv('VAM_INTERN_CONFIDENCE', '0.6'))
+            except ValueError:
+                confidence_floor = 0.6
+            confidence = normalized.get('confidence')
+            if normalized.get('status') == 'valid' and (
+                not isinstance(confidence, (int, float)) or confidence >= confidence_floor
+            ):
+                return raw, text
+        except Exception:
+            intern_result = None
+        try:
+            return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)
+        except Exception:
+            if intern_result:
+                return intern_result
+            raise
     if provider == 'harness' or (provider == 'auto' and scorer['url']):
         return _harness_score(contract_text, scenario_text)
     return _local_score(cfg, contract_text, scenario_text, temperature=0.0, max_tokens=256)

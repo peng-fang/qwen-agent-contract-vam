@@ -19,10 +19,44 @@ LEASE = {
 VALID = {'risk_score': 8, 'feasibility_score': 4, 'loss_score': 3, 'confidence': 0.8}
 
 
-def test_intern_is_default_and_model_name_survives(monkeypatch):
+def test_local_qwen_is_available_scorer(monkeypatch):
+    monkeypatch.setenv('VAM_SCORER_PROVIDER', 'local')
+
+    def generate(cfg, system, user, **kwargs):
+        assert '本地 Qwen 校准' in system
+        return {'risk_score': 7, 'feasibility_score': 5, 'loss_score': 6, 'confidence': 0.7, 'evidence': '测试'}, ''
+
+    monkeypatch.setattr(pipeline, '_generate_json', generate)
+    raw, _ = pipeline._score_leaf({'model': 'qwen2.5:7b'}, '合同原文', '情景')
+    assert raw['scorer_model'] == 'qwen2.5:7b'
+    assert raw['feasibility_score'] == 5
+
+
+def test_vam_cascade_falls_back_to_qwen_on_low_confidence(monkeypatch):
+    monkeypatch.delenv('VAM_SCORER_PROVIDER', raising=False)
+    monkeypatch.setenv('VAM_INTERN_CONFIDENCE', '0.6')
+    calls = []
+
+    def intern(contract_text, scenario_text):
+        calls.append('intern')
+        return {**VALID, 'confidence': 0.3, 'model': 'Intern-Decision-2B'}, ''
+
+    def local(cfg, contract_text, scenario_text, temperature, max_tokens):
+        calls.append('local')
+        return {**VALID, 'confidence': 0.7, 'scorer_model': 'qwen2.5:7b'}, ''
+
+    monkeypatch.setattr(pipeline, '_intern_score', intern)
+    monkeypatch.setattr(pipeline, '_local_score', local)
+    raw, _ = pipeline._score_leaf({}, '合同原文', '情景')
+    assert calls == ['intern', 'local']
+    assert raw['scorer_model'] == 'qwen2.5:7b'
+
+
+def test_intern_scorer_option_and_model_name_survives(monkeypatch):
     from vam_sandbox.render import render_markdown_report
 
     monkeypatch.delenv('VAM_SCORER_PROVIDER', raising=False)
+    monkeypatch.setenv('VAM_SCORER_PROVIDER', 'intern')
     inputs = []
 
     class Response:
