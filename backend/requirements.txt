@@ -7,3 +7,5 @@ python-multipart==0.0.33
 aiofiles==25.1.0
 sse-starlette==3.7.0
 python-dotenv==1.2.4
+reportlab==4.2.5
+# qwen-agent 与 qwen_agent 依赖已由项目主环境安装

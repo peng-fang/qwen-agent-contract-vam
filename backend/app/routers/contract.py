@@ -1,6 +1,7 @@
-﻿"""合同核验相关路由。"""
+"""合同核验相关路由。"""
 
 import asyncio
+import copy
 import json
 import queue
 import re
@@ -12,10 +13,11 @@ from typing import List
 import aiofiles
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
+from qwen_agent.llm.base import ModelServiceError
 from starlette.concurrency import run_in_threadpool
 
 from app.schemas import ContractAnalyzeResponse, RentalReviewResponse
-from app.services.contract_service import analyze_contract
+from app.services.contract_service import analyze_contract, analyze_contract_stream
 from app.services.clause_service import inspect_amounts
 from app.services import rental_review_service
 
@@ -46,15 +48,9 @@ def _amount_notice(answer: str, checks: List[dict]) -> str:
     )
 
 
-@router.post('/analyze', response_model=ContractAnalyzeResponse)
-async def analyze(
-    question: str = Form(...),
-    files: List[UploadFile] = File(...),
-):
-    """上传一份或多份材料 + 问题，返回合同核验回答。"""
+async def _save_uploads(files: List[UploadFile]) -> List[tuple]:
+    """保存上传文件，返回 (路径, 原始文件名) 列表，供问答与金额核验共用。"""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
-    saved: List[str] = []
     specs: List[tuple] = []
     for f in files:
         if not f.filename:
@@ -65,20 +61,70 @@ async def analyze(
         data = await f.read()
         async with aiofiles.open(dest, 'wb') as out:
             await out.write(data)
-        saved.append(str(dest))
         specs.append((str(dest), Path(f.filename).name))
+    return specs
 
-    answer = await run_in_threadpool(analyze_contract, saved, question)
+
+def _checks_for(specs: List[tuple]) -> List[dict]:
     try:
-        checks = await run_in_threadpool(inspect_amounts, specs)
+        return inspect_amounts(specs)
     except Exception:  # noqa: BLE001 - 条件核验失败不能阻断问答
-        checks = []
+        return []
+
+
+@router.post('/analyze', response_model=ContractAnalyzeResponse)
+async def analyze(
+    question: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    """上传一份或多份材料 + 问题，返回合同核验回答。"""
+    specs = await _save_uploads(files)
+    saved = [path for path, _ in specs]
+
+    try:
+        answer = await run_in_threadpool(analyze_contract, saved, question)
+    except ModelServiceError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail='本地模型服务不可用。请确认 Ollama 已启动，且 qwen2.5:7b 已下载。',
+        ) from exc
+    checks = await run_in_threadpool(_checks_for, specs)
     return ContractAnalyzeResponse(
         question=question,
         answer=answer,
         files=[Path(p).name for p in saved],
         amount_checks=checks,
         amount_notice=_amount_notice(answer, checks),
+    )
+
+
+@router.post('/analyze/stream')
+async def analyze_stream(
+    question: str = Form(...),
+    files: List[UploadFile] = File(...),
+):
+    """流式返回合同核验回答；事件类型为 chunk / done / error。"""
+    specs = await _save_uploads(files)
+    saved = [path for path, _ in specs]
+
+    def event_generator():
+        answer = ''
+        try:
+            for text in analyze_contract_stream(saved, question):
+                answer = text
+                yield f"data: {json.dumps({'type': 'chunk', 'text': text}, ensure_ascii=False)}\n\n"
+            checks = _checks_for(specs)
+            yield f"data: {json.dumps({'type': 'done', 'files': [Path(p).name for p in saved], 'amount_checks': checks, 'amount_notice': _amount_notice(answer, checks)}, ensure_ascii=False)}\n\n"
+        except ModelServiceError as exc:
+            detail = '本地模型服务不可用。请确认 Ollama 已启动，且 qwen2.5:7b 已下载。'
+            yield f"data: {json.dumps({'type': 'error', 'detail': detail}, ensure_ascii=False)}\n\n"
+        except Exception as exc:  # noqa: BLE001
+            yield f"data: {json.dumps({'type': 'error', 'detail': str(exc)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type='text/event-stream',
+        headers={'Cache-Control': 'no-cache', 'X-Accel-Buffering': 'no'},
     )
 
 
@@ -123,6 +169,7 @@ async def rental_review(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    result['file_id'] = target.name
     return RentalReviewResponse(**result)
 
 
@@ -157,8 +204,14 @@ async def rental_review_stream(
 
     events: queue.Queue = queue.Queue()
 
-    def progress(stage: str, status: str, detail: str = '') -> None:
+    def progress(stage: str, status: str, detail: str = '', payload=None) -> None:
         events.put({'type': 'progress', 'stage': stage, 'status': status, 'detail': detail})
+        if isinstance(payload, dict) and isinstance(payload.get('risks'), list):
+            events.put({
+                'type': 'partial',
+                'phase': payload.get('phase', ''),
+                'risks': copy.deepcopy(payload['risks']),
+            })
 
     def worker() -> None:
         try:
@@ -170,6 +223,7 @@ async def rental_review_stream(
                 contract_type,
                 progress=progress,
             )
+            result['file_id'] = target.name
             events.put({'type': 'result', 'result': result})
         except Exception as exc:  # noqa: BLE001
             events.put({'type': 'error', 'detail': str(exc)})

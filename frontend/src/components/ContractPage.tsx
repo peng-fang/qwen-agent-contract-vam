@@ -1,11 +1,12 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import { analyzeContract, searchEvidence, type EvidenceMatch, type RentalRisk, type VamEvidenceInput } from '@/lib/api'
+import { analyzeContractStream, searchEvidence, type EvidenceMatch, type RentalRisk, type VamEvidenceInput } from '@/lib/api'
 import { BrandLogo } from './BrandLogo'
 import { AskAssistantDrawer } from './AskAssistantDrawer'
+import { MarkdownAnswer } from './MarkdownAnswer'
 import { PdfViewer } from './PdfViewer'
 import { RentalReviewPanel, type AskRiskContext } from './RentalReviewPanel'
 
@@ -24,19 +25,33 @@ const SUGGESTIONS = [
 ]
 
 interface ContractPageProps {
-  onOpenChecklist: (evidence?: VamEvidenceInput) => void
+  files: File[]
+  onFilesChange: (files: File[]) => void
+  checklistEvidence: VamEvidenceInput[]
+  onOpenChecklist: (evidence?: VamEvidenceInput | VamEvidenceInput[]) => void
+  onAddChecklist: (evidence: VamEvidenceInput | VamEvidenceInput[]) => void
+  onRemoveChecklist: (evidence: VamEvidenceInput) => void
 }
 
-export function ContractPage({ onOpenChecklist }: ContractPageProps) {
-  const [files, setFiles] = useState<File[]>([])
+export function ContractPage({
+  files,
+  onFilesChange,
+  checklistEvidence,
+  onOpenChecklist,
+  onAddChecklist,
+  onRemoveChecklist,
+}: ContractPageProps) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
   const [amountNotice, setAmountNotice] = useState('')
+  const [streamAnswer, setStreamAnswer] = useState('')
   const [resultFiles, setResultFiles] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [searchText, setSearchText] = useState('')
   const [matches, setMatches] = useState<EvidenceMatch[]>([])
+  const [focusPage, setFocusPage] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantContext, setAssistantContext] = useState<AskRiskContext | null>(null)
@@ -49,11 +64,25 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
     [files],
   )
 
+  useEffect(() => {
+    if (!loading) return
+    const started = Date.now()
+    const timer = window.setInterval(() => {
+      setElapsed(Math.floor((Date.now() - started) / 1000))
+    }, 1000)
+    return () => {
+      window.clearInterval(timer)
+      setElapsed(0)
+    }
+  }, [loading])
+
   async function run() {
     setError('')
     setAnswer('')
     setAmountNotice('')
+    setStreamAnswer('')
     setMatches([])
+    setFocusPage(null)
     setResultFiles([])
     if (!question.trim()) {
       setError('请输入要核验的问题。')
@@ -65,7 +94,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
     }
     setLoading(true)
     try {
-      const res = await analyzeContract(question, files)
+      const res = await analyzeContractStream(question, files, setStreamAnswer)
       setAnswer(res.answer)
       setAmountNotice(res.amount_notice || '')
       setResultFiles(res.files)
@@ -90,6 +119,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
     try {
       const m = await searchEvidence(resultFiles[selectedIndex], searchText)
       setMatches(m)
+      setFocusPage(m[0]?.page ?? null)
     } catch (e) {
       setError(e instanceof Error ? e.message : '定位失败')
     }
@@ -123,6 +153,9 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
 
       <RentalReviewPanel
         files={files}
+        checklistEvidence={checklistEvidence}
+        onAddChecklist={onAddChecklist}
+        onRemoveChecklist={onRemoveChecklist}
         onAsk={(context, risks) => {
           setAssistantContext(context)
           setAssistantRisks(risks)
@@ -144,8 +177,9 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 multiple
                 className="block w-full text-sm text-muted-foreground"
                 onChange={(e) => {
-                  setFiles(Array.from(e.target.files ?? []))
+                  onFilesChange(Array.from(e.target.files ?? []))
                   setMatches([])
+                  setFocusPage(null)
                   setResultFiles([])
                 }}
               />
@@ -162,17 +196,22 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 onChange={(e) => setQuestion(e.target.value)}
               />
               <Button onClick={run} disabled={loading}>
-                {loading ? '核验中…' : '开始核验'}
+                {loading ? `核验中… ${elapsed}s` : '开始核验'}
               </Button>
+              <p className="text-xs text-muted-foreground">
+                首次核验约 10–20 秒；相同文件和问题会复用缓存。
+              </p>
               {error && <div className="text-sm text-red-600">{error}</div>}
-              {answer && (
+              {(answer || streamAnswer) && (
                 <div className="space-y-2">
                   {amountNotice && (
                     <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                       {amountNotice}
                     </div>
                   )}
-                  <pre className="whitespace-pre-wrap rounded-md bg-muted p-3 text-sm">{answer}</pre>
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <MarkdownAnswer text={answer || streamAnswer} />
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -227,6 +266,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 onChange={(e) => {
                   setSelectedIndex(Number(e.target.value))
                   setMatches([])
+                  setFocusPage(null)
                 }}
               >
                 {fileOptions.map((o) => (
@@ -261,7 +301,8 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 {matches.map((match) => (
                   <li key={`${match.page}-${match.top}-${match.x0}`} className="flex flex-wrap items-start gap-2 text-sm">
                     <p className="min-w-0 grow basis-56 break-words">
-                      <span className="mr-2 font-medium">第 {match.page} 页</span>{match.text}
+                      <button type="button" className="mr-2 font-medium underline underline-offset-2"
+                        onClick={() => setFocusPage(match.page)}>第 {match.page} 页</button>{match.text}
                     </p>
                     <Button variant="outline" onClick={() => onOpenChecklist({
                       file_id: resultFiles[selectedIndex],
@@ -273,7 +314,7 @@ export function ContractPage({ onOpenChecklist }: ContractPageProps) {
                 ))}
               </ul>
             )}
-            <PdfViewer file={files[selectedIndex]} matches={matches} />
+            <PdfViewer file={files[selectedIndex]} matches={matches} focusPage={focusPage} />
           </CardContent>
         </Card>
       </div>

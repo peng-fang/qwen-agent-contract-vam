@@ -12,15 +12,76 @@ export type ChecklistItem = {
 export type ChecklistResult = {
   items: ChecklistItem[]; priority_model: string | null; warning: string | null; scope: string; source_count: number
 }
-export type Material = { file?: File; text?: string; evidence?: VamEvidenceInput[] }
+export type Material = { file?: File; files?: File[]; text?: string; evidence?: VamEvidenceInput[] }
+export type ChecklistProgress = { stage: string; status: 'running' | 'done' | 'warning'; detail: string }
 
-export async function runChecklist(role: string, material: Material) {
+export function checklistBody(role: string, material: Material) {
   const body = new FormData()
   body.append('role', role)
   if (material.file) body.append('file', material.file)
+  for (const file of material.files ?? []) body.append('files', file)
   if (material.text) body.append('text', material.text)
   if (material.evidence?.length) body.append('evidence', JSON.stringify(material.evidence))
-  return (await axios.post<ChecklistResult>('/api/checklist/run', body)).data
+  return body
+}
+
+export async function runChecklist(role: string, material: Material) {
+  return (await axios.post<ChecklistResult>('/api/checklist/run', checklistBody(role, material))).data
+}
+
+export async function runChecklistStream(
+  role: string,
+  material: Material,
+  onProgress?: (event: ChecklistProgress) => void,
+  onPartial?: (items: ChecklistItem[]) => void,
+  signal?: AbortSignal,
+) {  const response = await fetch('/api/checklist/run/stream', {
+    method: 'POST',
+    body: checklistBody(role, material),
+    signal,
+  })
+  if (!response.ok || !response.body) {
+    const raw = await response.text().catch(() => '')
+    throw new Error(raw || `请求失败（${response.status}）`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const blocks = buffer.split('\n\n')
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) {
+      const dataLine = block.split('\n').find((line) => line.startsWith('data:'))
+      if (!dataLine) continue
+      const payload = JSON.parse(dataLine.slice(5).trim()) as {
+        type: string
+        stage?: string
+        status?: 'running' | 'done' | 'warning'
+        detail?: string
+        items?: ChecklistItem[]
+        result?: ChecklistResult
+      }
+      if (payload.type === 'progress' && payload.stage && payload.status) {
+        onProgress?.({ stage: payload.stage, status: payload.status, detail: payload.detail ?? '' })
+      } else if (payload.type === 'partial' && Array.isArray(payload.items)) {
+        onPartial?.(payload.items.map((item) => ({ ...item, priority: item.priority ?? null })))
+      } else if (payload.type === 'result' && payload.result) {
+        return payload.result
+      } else if (payload.type === 'error') {
+        throw new Error(payload.detail || '生成清单失败')
+      }
+    }
+  }
+  throw new Error('清单流意外结束，请重试。')
+}
+
+export async function exportChecklistPdf(items: ChecklistItem[], role: string, scope: string) {
+  const response = await axios.post('/api/checklist/export', { items, role, scope }, { responseType: 'blob' })
+  return response.data as Blob
 }
 
 export type ConsequenceTemplate = 'lease_exit' | 'repurchase'

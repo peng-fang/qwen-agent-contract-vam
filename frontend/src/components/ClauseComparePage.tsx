@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,6 +9,7 @@ import {
   type ClauseMatch,
   type ClauseSide,
   type ClauseExtractionResult,
+  type VamEvidenceInput,
 } from '@/lib/api'
 import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
 
@@ -111,6 +112,29 @@ function compact(text: string): string {
   return text.replace(/\s+/g, ' ').trim()
 }
 
+function matchEvidence(match?: ClauseMatch, fileIds?: Map<string, string>): VamEvidenceInput[] {
+  if (!match) return []
+  const seen = new Set<string>()
+  const items: VamEvidenceInput[] = []
+  for (const side of [match.promo, match.contract]) {
+    for (const evidence of side?.evidences ?? []) {
+      const fileId = fileIds?.get(evidence.document_id)
+      if (!fileId || !/^[a-f0-9]{32}\.pdf$/i.test(fileId)) continue
+      if (!evidence.page || !evidence.quote.trim()) continue
+      const key = `${fileId}:${evidence.page}:${evidence.quote}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      items.push({
+        file_id: fileId,
+        filename: evidence.filename,
+        page: evidence.page,
+        quote: evidence.quote.slice(0, 2400),
+      })
+    }
+  }
+  return items.slice(0, 6)
+}
+
 function EvidenceCell({
   side,
   file,
@@ -191,15 +215,23 @@ function MatchRow({
   match,
   promoFile,
   contractFile,
+  fileIds,
+  checklistEvidence,
   onOpen,
   onResolve,
+  onAdd,
+  onRemove,
 }: {
   clauseType: string
   match?: ClauseMatch
   promoFile?: File | null
   contractFile?: File | null
+  fileIds?: Map<string, string>
+  checklistEvidence?: VamEvidenceInput[]
   onOpen: (evidence: EvidenceDetail, file?: File | null) => void
   onResolve: (evidenceId: string) => void
+  onAdd?: (items: VamEvidenceInput[]) => void
+  onRemove?: (evidence: VamEvidenceInput) => void
 }) {
   const verdict = match?.verdict
   const conflict = verdict === 'conflict'
@@ -210,6 +242,10 @@ function MatchRow({
       : match?.verdict_group === 'consistent'
         ? 'green'
         : 'secondary'
+  const evidence = matchEvidence(match, fileIds)
+  const canAdd = Boolean(onAdd && evidence.length && verdict && verdict !== 'consistent')
+  const added = Boolean(evidence.length && evidence.every((item) => checklistEvidence?.some((existing) =>
+    existing.file_id === item.file_id && existing.page === item.page && existing.quote === item.quote)))
 
   return (
     <tr className={conflict ? 'bg-red-50/70' : undefined}>
@@ -238,6 +274,22 @@ function MatchRow({
             {match.amount && match.amount.status !== 'no_amount' && (
               <AmountBlock check={match.amount} onResolve={onResolve} />
             )}
+            {canAdd && (
+              <Button
+                type="button"
+                size="sm"
+                variant={added ? 'secondary' : 'outline'}
+                onClick={() => {
+                  if (added) {
+                    evidence.forEach((item) => onRemove?.(item))
+                  } else {
+                    onAdd?.(evidence)
+                  }
+                }}
+              >
+                {added ? '已加入必问清单' : '加入必问清单'}
+              </Button>
+            )}
           </div>
         ) : (
           <span className="text-sm text-muted-foreground">尚未比对</span>
@@ -258,7 +310,19 @@ function MatchRow({
   )
 }
 
-export function ClauseComparePage() {
+export function ClauseComparePage({
+  sharedFiles = [],
+  onFilesChange,
+  checklistEvidence = [],
+  onAddChecklist,
+  onRemoveChecklist,
+}: {
+  sharedFiles?: File[]
+  onFilesChange?: (files: File[]) => void
+  checklistEvidence?: VamEvidenceInput[]
+  onAddChecklist?: (items: VamEvidenceInput[]) => void
+  onRemoveChecklist?: (evidence: VamEvidenceInput) => void
+}) {
   const [promoFile, setPromoFile] = useState<File | null>(null)
   const [contractFile, setContractFile] = useState<File | null>(null)
   const [result, setResult] = useState<ClauseExtractionResult | null>(null)
@@ -266,6 +330,16 @@ export function ClauseComparePage() {
   const [error, setError] = useState('')
   const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
   const [evidenceFile, setEvidenceFile] = useState<File | null>(null)
+
+  useEffect(() => {
+    if (!sharedFiles.length) return
+    setPromoFile((current) => current ?? sharedFiles.find((file) => /promo|宣传/i.test(file.name)) ?? sharedFiles[0] ?? null)
+    setContractFile((current) => current ?? sharedFiles.find((file) => /contract|合同/i.test(file.name)) ?? sharedFiles[1] ?? sharedFiles[0] ?? null)
+  }, [sharedFiles])
+
+  function rememberFiles(next: File[]) {
+    onFilesChange?.([...sharedFiles.filter((file) => !next.some((item) => item.name === file.name)), ...next])
+  }
 
   function openEvidence(detail: EvidenceDetail, file?: File | null) {
     setEvidence(detail)
@@ -328,6 +402,9 @@ export function ClauseComparePage() {
     clauseType,
     match: result?.matches.find((item) => item.clause_type === clauseType),
   }))
+  const fileIds = useMemo(() => new Map(
+    (result?.documents ?? []).map((document) => [document.document_id, document.file_id ?? '']),
+  ), [result])
 
   return (
     <div className="space-y-6">
@@ -420,7 +497,11 @@ export function ClauseComparePage() {
                 type="file"
                 accept=".pdf,.txt,.md"
                 className="block w-full text-sm text-muted-foreground"
-                onChange={(e) => setPromoFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const selected = e.target.files?.[0] ?? null
+                  setPromoFile(selected)
+                  if (selected) rememberFiles([selected])
+                }}
               />
               <span className="block truncate text-xs text-muted-foreground">
                 {promoFile ? promoFile.name : '例如 demo_data/promo_gym.pdf'}
@@ -432,7 +513,11 @@ export function ClauseComparePage() {
                 type="file"
                 accept=".pdf,.txt,.md"
                 className="block w-full text-sm text-muted-foreground"
-                onChange={(e) => setContractFile(e.target.files?.[0] ?? null)}
+                onChange={(e) => {
+                  const selected = e.target.files?.[0] ?? null
+                  setContractFile(selected)
+                  if (selected) rememberFiles([selected])
+                }}
               />
               <span className="block truncate text-xs text-muted-foreground">
                 {contractFile ? contractFile.name : '例如 demo_data/contract_gym.pdf'}
@@ -441,6 +526,18 @@ export function ClauseComparePage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            {sharedFiles.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setPromoFile(sharedFiles.find((file) => /promo|宣传/i.test(file.name)) ?? sharedFiles[0])
+                  setContractFile(sharedFiles.find((file) => /contract|合同/i.test(file.name)) ?? sharedFiles[1] ?? sharedFiles[0])
+                }}
+              >
+                使用工作区文件
+              </Button>
+            )}
             <Button onClick={run} disabled={loading}>
               {loading ? '对照中…' : '开始对照'}
             </Button>
@@ -500,8 +597,12 @@ export function ClauseComparePage() {
                     match={match}
                     promoFile={promoFile}
                     contractFile={contractFile}
+                    fileIds={fileIds}
+                    checklistEvidence={checklistEvidence}
                     onOpen={openEvidence}
                     onResolve={resolveById}
+                    onAdd={onAddChecklist}
+                    onRemove={onRemoveChecklist}
                   />
                 ))}
               </tbody>

@@ -8,9 +8,14 @@
 """
 
 from pathlib import Path
+import logging
 import os
 import sys
+import shutil
+import subprocess
 import threading
+import time
+from urllib.parse import urlsplit
 
 # 让仓库内自带的 qwen_agent 源码可直接导入（离线包不依赖 pip install -e .）
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,6 +33,51 @@ from app.routers import checklist
 from app.schemas import HealthResponse
 
 app = FastAPI(title='签之前 API', version='0.1.0')
+logger = logging.getLogger(__name__)
+
+
+def _ensure_ollama() -> None:
+    """Start a local Ollama server if the desktop/service process is absent."""
+    if os.getenv('AUTO_START_OLLAMA', '1').strip().lower() in {'0', 'false', 'no'}:
+        return
+    raw = os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434/v1').rstrip('/')
+    parsed = urlsplit(raw)
+    if parsed.hostname not in {'127.0.0.1', 'localhost'}:
+        return
+    base = raw[:-3] if raw.endswith('/v1') else raw
+    try:
+        requests.get(f'{base}/api/tags', timeout=2)
+        return
+    except Exception:
+        pass
+
+    executable = shutil.which('ollama')
+    if not executable:
+        logger.warning('Ollama is not running and the ollama executable was not found')
+        return
+    logger.warning('Ollama is not running; starting a local server')
+    kwargs = {}
+    if os.name == 'nt':
+        kwargs['creationflags'] = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+    try:
+        subprocess.Popen(
+            [executable, 'serve'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            **kwargs,
+        )
+    except Exception as exc:
+        logger.warning('Could not start Ollama: %s', type(exc).__name__)
+        return
+    for _ in range(20):
+        time.sleep(0.5)
+        try:
+            requests.get(f'{base}/api/tags', timeout=2)
+            return
+        except Exception:
+            continue
+    logger.warning('Ollama did not become ready in time')
+
 
 
 def _warm_ollama_models() -> None:
@@ -65,7 +115,11 @@ def _warm_ollama_models() -> None:
 
 @app.on_event('startup')
 def warm_models_on_startup() -> None:
-    threading.Thread(target=_warm_ollama_models, name='model-preload', daemon=True).start()
+    def preload() -> None:
+        _ensure_ollama()
+        _warm_ollama_models()
+
+    threading.Thread(target=preload, name='model-preload', daemon=True).start()
 
 app.add_middleware(
     CORSMiddleware,

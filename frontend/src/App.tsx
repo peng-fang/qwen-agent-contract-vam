@@ -1,33 +1,51 @@
 import { useState } from 'react'
-import { CashflowPage } from './components/CashflowPage'
 import { ClauseComparePage } from './components/ClauseComparePage'
 import { ContractPage } from './components/ContractPage'
 import { ChecklistPage } from './components/ChecklistPage'
 import { VersionComparePage } from './components/VersionComparePage'
 import type { VamEvidenceInput } from './lib/api'
 
-type Tab = 'contract' | 'compare' | 'versions' | 'checklist' | 'cashflow'
+type Tab = 'contract' | 'compare' | 'versions' | 'checklist'
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'contract', label: '合同核验' },
   { key: 'compare', label: '宣传 vs 合同' },
   { key: 'versions', label: '版本对比' },
   { key: 'checklist', label: '签约前必问清单' },
-  { key: 'cashflow', label: '资金流' },
 ]
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('contract')
+  const [files, setFiles] = useState<File[]>([])
   const [checklistEvidence, setChecklistEvidence] = useState<VamEvidenceInput[]>([])
   const [checklistVersion, setChecklistVersion] = useState(0)
 
-  function openChecklist(evidence?: VamEvidenceInput) {
+  function addChecklist(evidence: VamEvidenceInput | VamEvidenceInput[]) {
+    const incoming = Array.isArray(evidence) ? evidence : [evidence]
+    setChecklistEvidence((items) => {
+      const merged = [...items]
+      for (const entry of incoming) {
+        if (!merged.some((item) => item.file_id === entry.file_id && item.page === entry.page && item.quote === entry.quote)) {
+          merged.push(entry)
+        }
+      }
+      return merged.slice(-30)
+    })
+  }
+
+  function removeChecklist(evidence: VamEvidenceInput) {
+    setChecklistEvidence((items) => items.filter((item) =>
+      !(item.file_id === evidence.file_id && item.page === evidence.page && item.quote === evidence.quote)))
+  }
+
+  function removeFile(file: File) {
+    setFiles((items) => items.filter((item) => !(item.name === file.name && item.lastModified === file.lastModified)))
+  }
+
+  function openChecklist(evidence?: VamEvidenceInput | VamEvidenceInput[]) {
     if (evidence) {
+      addChecklist(evidence)
       setChecklistVersion((version) => version + 1)
-      setChecklistEvidence((items) => [
-        ...items.filter((item) => !(item.file_id === evidence.file_id && item.page === evidence.page && item.quote === evidence.quote)),
-        evidence,
-      ].slice(-6))
     }
     setTab('checklist')
   }
@@ -57,13 +75,38 @@ export default function App() {
       </header>
 
       <main className="mx-auto max-w-[1700px] px-4 py-6">
-        <div hidden={tab !== 'contract'}><ContractPage onOpenChecklist={openChecklist} /></div>
-        {tab === 'compare' && <ClauseComparePage />}
+        <div hidden={tab !== 'contract'}>
+          <ContractPage
+            files={files}
+            onFilesChange={setFiles}
+            checklistEvidence={checklistEvidence}
+            onAddChecklist={addChecklist}
+            onRemoveChecklist={removeChecklist}
+            onOpenChecklist={openChecklist}
+          />
+        </div>
+        {tab === 'compare' && (
+          <ClauseComparePage
+            sharedFiles={files}
+            onFilesChange={setFiles}
+            checklistEvidence={checklistEvidence}
+            onAddChecklist={addChecklist}
+            onRemoveChecklist={removeChecklist}
+          />
+        )}
         {tab === 'versions' && <VersionComparePage />}
-        <div hidden={tab !== 'checklist'}><ChecklistPage key={checklistVersion} evidence={checklistEvidence} onRemoveEvidence={(index) => {
-          setChecklistEvidence((items) => items.filter((_, i) => i !== index))
-        }} /></div>
-        {tab === 'cashflow' && <CashflowPage />}
+        <div hidden={tab !== 'checklist'}>
+          <ChecklistPage
+            key={checklistVersion}
+            evidence={checklistEvidence}
+            onRemoveEvidence={(index) => {
+              setChecklistEvidence((items) => items.filter((_, i) => i !== index))
+            }}
+            sharedFiles={files}
+            onFilesChange={setFiles}
+            onRemoveFile={removeFile}
+          />
+        </div>
       </main>
     </div>
   )

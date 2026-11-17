@@ -1,12 +1,12 @@
 # 签之前 · React 前端
 
-基于 **React + TypeScript + Vite + Tailwind + shadcn/ui 风格组件 + React Flow + ECharts**。
+基于 **React + TypeScript + Vite + Tailwind + shadcn/ui 风格组件**。
 
 ## 页面
 
 - **合同核验**：上传宣传材料/合同、提问、双栏 PDF 证据高亮。
+- **宣传 vs 合同**：条款结构化抽取与跨文档对照。
 - **签约前必问清单**：上传合同、粘贴条款或带入核验原文。查看优先级、原文和条件后果，并复制可直接向对方提出的问题。
-- **资金流**：ECharts 累计成本对比图（当前为示例数据）。
 
 ## 开发
 

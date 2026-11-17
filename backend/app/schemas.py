@@ -155,6 +155,7 @@ class VersionCompareResponse(BaseModel):
 
 class RentalReviewResponse(BaseModel):
     filename: str
+    file_id: str | None = None
     file_type: str
     region: str
     region_label: str
