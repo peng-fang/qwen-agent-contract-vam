@@ -123,6 +123,66 @@ export async function analyzeContract(question: string, files: File[]) {
   return res.data
 }
 
+export async function analyzeContractStream(
+  question: string,
+  files: File[],
+  onChunk: (text: string) => void,
+  signal?: AbortSignal,
+) {
+  const form = new FormData()
+  form.append('question', question)
+  files.forEach((f) => form.append('files', f))
+
+  const response = await fetch('/api/contract/analyze/stream', {
+    method: 'POST',
+    body: form,
+    signal,
+  })
+  if (!response.ok || !response.body) {
+    const raw = await response.text().catch(() => '')
+    let detail = raw
+    try {
+      detail = JSON.parse(raw).detail ?? raw
+    } catch {
+      // Keep the raw response when the server did not return JSON.
+    }
+    throw new Error(detail || `请求失败（${response.status}）`)
+  }
+
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let answer = ''
+  let resultFiles: string[] = []
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const blocks = buffer.split('\n\n')
+    buffer = blocks.pop() ?? ''
+    for (const block of blocks) {
+      const dataLine = block.split('\n').find((line) => line.startsWith('data:'))
+      if (!dataLine) continue
+      const payload = JSON.parse(dataLine.slice(5).trim()) as {
+        type: string
+        text?: string
+        detail?: string
+        files?: string[]
+      }
+      if (payload.type === 'chunk' && typeof payload.text === 'string') {
+        answer = payload.text
+        onChunk(answer)
+      } else if (payload.type === 'done') {
+        resultFiles = payload.files ?? []
+      } else if (payload.type === 'error') {
+        throw new Error(payload.detail || '核验失败')
+      }
+    }
+  }
+  if (!answer) throw new Error('核验流意外结束，请重试。')
+  return { answer, files: resultFiles }
+}
+
 export type RentalRegion = 'mainland' | 'hongkong'
 export type RentalContractType =
   | 'auto'
@@ -172,6 +232,7 @@ export interface RentalRisk {
 
 export interface RentalReviewResult {
   filename: string
+  file_id?: string | null
   file_type: string
   region: RentalRegion
   region_label: string
@@ -236,6 +297,7 @@ export async function reviewRentalContractStream(
   useLlm = true,
   onProgress?: (event: RentalReviewProgress) => void,
   signal?: AbortSignal,
+  onPartial?: (risks: RentalRisk[]) => void,
 ): Promise<RentalReviewResult> {
   const form = new FormData()
   form.append('file', file)
@@ -273,6 +335,7 @@ export async function reviewRentalContractStream(
         status?: 'running' | 'done' | 'warning'
         detail?: string
         result?: RentalReviewResult
+        risks?: RentalRisk[]
       }
       if (payload.type === 'progress' && payload.stage && payload.status) {
         onProgress?.({
@@ -280,6 +343,8 @@ export async function reviewRentalContractStream(
           status: payload.status,
           detail: payload.detail ?? '',
         })
+      } else if (payload.type === 'partial' && Array.isArray(payload.risks)) {
+        onPartial?.(payload.risks)
       } else if (payload.type === 'result' && payload.result) {
         return payload.result
       } else if (payload.type === 'error') {
@@ -296,6 +361,13 @@ export async function searchEvidence(filename: string, query: string) {
     query,
   })
   return res.data.matches
+}
+
+export async function indexEvidence(file: File) {
+  const body = new FormData()
+  body.append('file', file)
+  const res = await axios.post<{ file_id: string; filename: string }>('/api/evidence/index', body)
+  return res.data
 }
 
 export async function runVam(query: string, study: VamStudy, evidence: VamEvidenceInput[]) {
@@ -386,6 +458,7 @@ export interface ClauseMatch {
 export interface ClauseExtractionResult {
   documents: {
     document_id: string
+    file_id?: string
     filename: string
     role: string
     pages: { page: number; text: string }[]

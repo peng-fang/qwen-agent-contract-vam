@@ -52,4 +52,8 @@ async def extract_clauses(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    # Keep the extraction-layer id (doc1/doc2) together with the saved upload
+    # id used by evidence search and checklist.
+    for document, (path, _original_name, _role) in zip(result.get('documents', []), specs):
+        document['file_id'] = Path(path).name
     return ClauseExtractionResponse(**result)

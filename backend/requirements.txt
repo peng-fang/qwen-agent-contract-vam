@@ -3,4 +3,5 @@ uvicorn[standard]
 python-multipart
 aiofiles
 sse-starlette
+reportlab
 # qwen-agent 与 qwen_agent 依赖已由项目主环境安装
