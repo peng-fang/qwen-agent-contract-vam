@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+from difflib import SequenceMatcher
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import urlsplit, urlunsplit
@@ -447,24 +448,82 @@ def _document_sources(filename, content):
     return [{'filename': label, 'page': page.page, 'kind': 'pdf', 'text': page.text} for page in pages]
 
 
-def generate_checklist(role='', text='', filename='', content=None, evidence=None):
+def _dedupe_cards(cards):
+    """Remove exact and near-duplicate questions, keeping the first wording."""
+    kept = []
+    for card in cards:
+        question = re.sub(r'[\W_]+', '', str(card.get('question', ''))).casefold()
+        title = re.sub(r'[\W_]+', '', str(card.get('title', ''))).casefold()
+        if not question:
+            continue
+        duplicate = False
+        for existing in kept:
+            other_question = re.sub(r'[\W_]+', '', str(existing.get('question', ''))).casefold()
+            other_title = re.sub(r'[\W_]+', '', str(existing.get('title', ''))).casefold()
+            same_topic = card.get('topic') == existing.get('topic')
+            question_ratio = SequenceMatcher(None, question, other_question).ratio()
+            title_ratio = SequenceMatcher(None, title, other_title).ratio()
+            if question_ratio >= 0.86 or (same_topic and title_ratio >= 0.8):
+                duplicate = True
+                break
+        if not duplicate:
+            kept.append(card)
+    return kept
+
+
+def _emit_progress(progress, stage, status, detail='', payload=None):
+    if not progress:
+        return
+    try:
+        if payload is not None:
+            try:
+                progress(stage, status, detail, payload)
+                return
+            except TypeError:
+                pass
+        progress(stage, status, detail)
+    except Exception:
+        pass
+
+
+def generate_checklist(role='', text='', filename='', content=None, evidence=None, progress=None, contents=None):
     role = role.strip()[:80] or '身份未指定，优先提示对双方都需要明确的事项'
-    if sum((bool(text.strip()), content is not None, bool(evidence))) != 1:
-        raise ValueError('请选择一种材料来源：上传文件、粘贴条款或带入原文。')
-    if content is not None:
-        sources = _document_sources(filename, content)
-    elif evidence:
-        resolved = resolve_evidence([VamEvidenceInput.model_validate(item) for item in evidence])
-        sources = [{'filename': item['filename'], 'page': item['page'], 'kind': 'pdf', 'text': item['quote']}
-                   for item in resolved]
-    else:
-        sources = [{'filename': '粘贴的条款', 'page': None, 'kind': 'text', 'text': text}]
+    if not text.strip() and content is None and not contents and not evidence:
+        raise ValueError('请至少提供一种材料：上传文件、粘贴条款或带入原文。')
+    _emit_progress(progress, 'parse', 'running', '正在读取合同材料。')
+    sources = []
+    if contents:
+        for name, data in contents:
+            sources.extend(_document_sources(name, data))
+    elif content is not None:
+        sources.extend(_document_sources(filename, content))
+    if text.strip():
+        sources.append({'filename': '粘贴的条款', 'page': None, 'kind': 'text', 'text': text})
+    if evidence:
+        for item in evidence:
+            try:
+                selected = VamEvidenceInput.model_validate(item)
+                resolved = resolve_evidence([selected])
+                sources.extend({'filename': entry['filename'], 'page': entry['page'],
+                                'kind': 'pdf', 'text': entry['quote']} for entry in resolved)
+            except (ValueError, TypeError):
+                # Evidence can outlive an upload session or reference a PDF that
+                # is no longer available. The quote itself is still valid input.
+                if isinstance(item, dict) and str(item.get('quote', '')).strip():
+                    sources.append({
+                        'filename': str(item.get('filename') or '所选原文'),
+                        'page': item.get('page'),
+                        'kind': 'text',
+                        'text': str(item['quote']),
+                    })
     sources = [source for source in sources if source['text'].strip()]
     if not sources:
         raise ValueError('没有读到可分析的文本。扫描图片请先转换为可复制文本。')
     if sum(len(source['text']) for source in sources) > MAX_SOURCE_CHARS:
         raise ValueError('材料超过 24000 字，请粘贴要核对的章节或从合同核验带入原文。')
     passages = _passages(sources)
+    _emit_progress(progress, 'parse', 'done', f'读取 {len(sources)} 段材料，切分 {len(passages)} 个片段。')
+    _emit_progress(progress, 'generate', 'running', '正在生成待确认问题。')
 
     cfg = default_llm_cfg()
     if cfg.get('model_server'):
@@ -482,8 +541,18 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
                 seen.add(key)
                 candidates.append(card)
     coverage = _ensure_coverage(candidates, passages)
+    candidates = _dedupe_cards(candidates)
+    coverage = [card for card in coverage if card in candidates]
     for index, card in enumerate(candidates, 1):
         card['id'] = f'C{index}'
+    _emit_progress(progress, 'generate', 'done', f'已生成 {len(candidates)} 条候选问题。')
+    _emit_progress(
+        progress,
+        'priority',
+        'running',
+        '正在判断哪些问题必须优先确认。',
+        payload={'items': [dict(card) for card in candidates]},
+    )
     model, warning = None, None
     if candidates:
         try:
@@ -491,6 +560,7 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
         except (requests.RequestException, TypeError, ValueError, AttributeError) as exc:
             logger.warning('Checklist priority unavailable: %s', type(exc).__name__)
             warning = '优先级服务暂不可用，清单按生成顺序展示。'
+    _emit_progress(progress, 'priority', 'done', '优先级判断完成。')
     priority_order = {name: index for index, name in enumerate(PRIORITIES)}
     candidates.sort(key=lambda item: priority_order.get(item['priority'], len(PRIORITIES)))
     # 所有 must/should 都保留；reference 只用于补足数量，最多 CHECKLIST_MAX_ITEMS 条。
@@ -515,6 +585,8 @@ def generate_checklist(role='', text='', filename='', content=None, evidence=Non
             add_card(card)
     included = chosen_ids
     scope = '所选原文' if evidence else '所上传文件的可读取文本' if content is not None else '粘贴的条款'
-    return {'items': [card for card in candidates if card['id'] in included],
+    result_items = [card for card in candidates if card['id'] in included]
+    _emit_progress(progress, 'done', 'done', f'生成完成，共 {len(result_items)} 条待确认事项。')
+    return {'items': result_items,
             'priority_model': model, 'warning': warning, 'scope': scope,
             'source_count': len(sources)}

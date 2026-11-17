@@ -1022,9 +1022,16 @@ def _select_web_indexes(
     return sorted(high_medium + low, key=lambda i: severity_order.get(candidates[i - 1].get('severity', 'medium'), 9))
 
 
-def _emit(progress: Optional[Callable[[str, str, str], None]], stage: str, status: str, detail: str = '') -> None:
+def _emit(progress: Optional[Callable[..., None]], stage: str, status: str, detail: str = '',
+          payload: Optional[Dict[str, Any]] = None) -> None:
     if progress:
         try:
+            if payload is not None:
+                try:
+                    progress(stage, status, detail, payload)
+                    return
+                except TypeError:
+                    pass
             progress(stage, status, detail)
         except Exception:
             pass
@@ -1236,7 +1243,13 @@ def review_parsed(
         ),
     })
 
-    _emit(progress, 'judge', 'running', 'Judge 正在复核引文与法律依据。')
+    _emit(
+        progress,
+        'judge',
+        'running',
+        f'已生成 {len(risks)} 条风险候选，Judge 正在复核引文与法律依据。',
+        payload={'risks': risks, 'phase': 'before_judge'},
+    )
     judgeable = _judgeable_risks(risks)
     judgments = []
     if use_llm and judgeable:
@@ -1314,6 +1327,13 @@ def review_parsed(
     medium = sum(1 for r in final_risks if r['severity'] == 'medium' and r['status'] != 'rejected')
     score = min(100, high * 25 + medium * 12 + max(0, len(final_risks) - high - medium) * 5)
     level = 'high' if score >= 60 else 'medium' if score >= 30 else 'low'
+    _emit(
+        progress,
+        'judge',
+        'done',
+        'Judge 复核完成，风险结果已更新。',
+        payload={'risks': final_risks, 'phase': 'after_judge'},
+    )
     _emit(progress, 'done', 'done', f'审查完成，共 {len(final_risks)} 条风险。')
     return {
         'filename': parsed.filename,

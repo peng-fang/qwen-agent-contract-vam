@@ -9,6 +9,7 @@ import {
   type RentalReviewProgress,
   type RentalReviewResult,
   type RentalRisk,
+  type VamEvidenceInput,
 } from '@/lib/api'
 import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
 
@@ -170,10 +171,14 @@ function RiskCard({
   risk,
   onOpen,
   onAsk,
+  checklistAdded,
+  onToggleChecklist,
 }: {
   risk: RentalRisk
   onOpen: (evidence: EvidenceDetail) => void
   onAsk?: (context: AskRiskContext) => void
+  checklistAdded?: boolean
+  onToggleChecklist?: () => void
 }) {
   return (
     <div className="rounded-lg border border-border bg-background p-4 shadow-sm">
@@ -211,6 +216,16 @@ function RiskCard({
               }
             >
               带着问题问助手
+            </Button>
+          )}
+          {onToggleChecklist && (
+            <Button
+              variant={checklistAdded ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={onToggleChecklist}
+              aria-pressed={Boolean(checklistAdded)}
+            >
+              {checklistAdded ? '已加入必问清单' : '加入必问清单'}
             </Button>
           )}
           <Button
@@ -292,15 +307,22 @@ function RiskCard({
 export function RentalReviewPanel({
   files,
   onAsk,
+  checklistEvidence = [],
+  onAddChecklist,
+  onRemoveChecklist,
 }: {
   files: File[]
   onAsk?: (context: AskRiskContext, risks: RentalRisk[]) => void
+  checklistEvidence?: VamEvidenceInput[]
+  onAddChecklist?: (evidence: VamEvidenceInput | VamEvidenceInput[]) => void
+  onRemoveChecklist?: (evidence: VamEvidenceInput) => void
 }) {
   const [result, setResult] = useState<RentalReviewResult | null>(null)
   const [loading, setLoading] = useState(false)
   const [fastMode, setFastMode] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [progress, setProgress] = useState<Record<string, RentalReviewProgress>>({})
+  const [partialRisks, setPartialRisks] = useState<RentalRisk[]>([])
   const abortRef = useRef<AbortController | null>(null)
   const [error, setError] = useState('')
   const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
@@ -325,6 +347,7 @@ export function RentalReviewPanel({
     }
     setLoading(true)
     setProgress({})
+    setPartialRisks([])
     const controller = new AbortController()
     abortRef.current = controller
     try {
@@ -335,6 +358,7 @@ export function RentalReviewPanel({
         !fastMode,
         (event) => setProgress((prev) => ({ ...prev, [event.stage]: event })),
         controller.signal,
+        (risks) => setPartialRisks(risks),
       )
       setResult(data)
     } catch (e) {
@@ -496,6 +520,17 @@ export function RentalReviewPanel({
           </div>
         )}
 
+        {loading && partialRisks.length > 0 && (
+          <div className="space-y-2">
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              已生成 {partialRisks.length} 条风险候选，Judge 正在复核；下面先展示当前结果，最终状态会自动更新。
+            </div>
+            {partialRisks.map((risk) => (
+              <RiskCard key={`partial-${risk.risk_id}`} risk={risk} onOpen={setEvidence} />
+            ))}
+          </div>
+        )}
+
         {result && (
           <>
             <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -581,14 +616,31 @@ export function RentalReviewPanel({
 
             <div className="space-y-3">
               {result.risks.length ? (
-                result.risks.map((risk) => (
-                  <RiskCard
-                    key={risk.risk_id}
-                    risk={risk}
-                    onOpen={setEvidence}
-                    onAsk={(context) => onAsk?.(context, result.risks)}
-                  />
-                ))
+                result.risks.map((risk) => {
+                  const evidenceForChecklist = result.file_id && risk.page ? {
+                    file_id: result.file_id,
+                    filename: result.filename,
+                    page: risk.page,
+                    quote: risk.quote,
+                  } : null
+                  const added = Boolean(evidenceForChecklist && checklistEvidence.some((item) =>
+                    item.file_id === evidenceForChecklist.file_id
+                    && item.page === evidenceForChecklist.page
+                    && item.quote === evidenceForChecklist.quote))
+                  return (
+                    <RiskCard
+                      key={risk.risk_id}
+                      risk={risk}
+                      onOpen={setEvidence}
+                      onAsk={(context) => onAsk?.(context, result.risks)}
+                      checklistAdded={added}
+                      onToggleChecklist={evidenceForChecklist ? () => {
+                        if (added) onRemoveChecklist?.(evidenceForChecklist)
+                        else onAddChecklist?.(evidenceForChecklist)
+                      } : undefined}
+                    />
+                  )
+                })
               ) : (
                 <div className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
                   未发现需要提示的风险条款；仍建议人工通读全文。

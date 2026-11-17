@@ -116,5 +116,5 @@ export function PdfViewer({ file, matches, focusPage, highlightText }: Props) {
     }
   }, [file, matches, focusPage, highlightText])
 
-  return <div ref={containerRef} className="w-full max-h-[70vh] overflow-auto" />
+  return <div ref={containerRef} className="w-full max-h-[78vh] overflow-auto" />
 }

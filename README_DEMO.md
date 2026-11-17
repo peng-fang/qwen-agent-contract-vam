@@ -57,18 +57,18 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 ### 签约前必问清单
 
+- 工作区共享合同：可同时使用多份合同、粘贴条款和核验原文，生成时合并为同一材料集；
 - 上传单份 PDF/TXT、粘贴条款，或带入核验原文。可选填用户身份；
 - Qwen 找出待确认事项，生成触发条件、可能后果和可直接复制的问题。后端按给定材料核对引文；
+- 右侧提供 PDF 证据定位：关键词搜索、跳页、高亮；
+- 风险卡和“宣传 vs 合同”的矛盾条目可加入必问清单，再次点击可取消；
+- 可勾选需要的问题并导出为中文 PDF；
 - 优先级默认 `CHECKLIST_PRIORITY_PROVIDER=cascade`：规则先排明显项，模糊项交给 Intern-Decision 2B；2B 置信度低时再由 Qwen 复核；`qwen`/`hybrid`/`intern` 保留为对照模式；
 - 支持在适用卡片中填写已确认的参数，估算回购或提前退租的条件金额。
 
 验收时打开“签约前必问清单”，选择“填入租赁示例”，再生成清单。查看押金与违约金问题的原文、复制问题并试算。押金 5000 元、违约金 10000 元、其他费用为 0 且无上限时，叠加与抵扣分别为 15000 元和 10000 元。
 
 课程评测可用同一组人工复核的租赁、消费服务和采购合同，对比直接问答、Qwen 清单和 Qwen 清单加 Intern 优先级。重点测前三项覆盖、引文支持和问题可执行性。
-
-### 资金流
-
-- ECharts 累计成本曲线（当前为示例数据，可接后端 cashflow 接口）。
 
 ## 启动
 
@@ -118,17 +118,16 @@ backend/
   requirements.txt
 
 frontend/
-  src/App.tsx                 # 三个页面：合同核验 / 合同情景推演与决策评分 / 资金流
+  src/App.tsx                 # 三个页面：合同核验 / 宣传 vs 合同 / 签约前必问清单
   src/components/
     ContractPage.tsx          # 双栏 PDF 高亮
-    VamPage.tsx               # React Flow 决策树
-    CashflowPage.tsx          # ECharts 资金流
+    ClauseComparePage.tsx     # 宣传与合同条款对照
+    ChecklistPage.tsx         # 签约前必问清单
     PdfViewer.tsx
     BrandLogo.tsx
     ui/                       # shadcn 风格基础组件
   vite.config.ts
 
-vam_sandbox/                  # 双 Agent 推演流水线
 mcp_servers/contract_tools.py # 退款/租金计算 MCP 工具
 ```
 
@@ -137,5 +136,4 @@ mcp_servers/contract_tools.py # 退款/租金计算 MCP 工具
 1. 本地 `qwen2.5:7b` 会编造页码，证据定位仍以关键词高亮为主，后续应改为结构化 `evidence_id`。
 2. 7B 模型的评估分数存在波动，部分推演可能给出相同分数。
 3. 只支持可提取文本的 PDF；扫描件需要 OCR。
-4. 资金流图当前是示例数据，尚未接后端现金流接口。
-5. 结果仅用于风险提示，不构成法律或投资意见。
+4. 结果仅用于风险提示，不构成法律或投资意见。
