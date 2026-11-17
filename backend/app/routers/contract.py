@@ -4,6 +4,7 @@ import asyncio
 import copy
 import json
 import queue
+import re
 import threading
 import uuid
 from pathlib import Path
@@ -17,16 +18,40 @@ from starlette.concurrency import run_in_threadpool
 
 from app.schemas import ContractAnalyzeResponse, RentalReviewResponse
 from app.services.contract_service import analyze_contract, analyze_contract_stream
+from app.services.clause_service import inspect_amounts
 from app.services import rental_review_service
 
 router = APIRouter(prefix='/api/contract', tags=['contract'])
 
 UPLOAD_DIR = Path(__file__).resolve().parents[2] / 'uploads'
 
+_MONEY_IN_ANSWER = re.compile(r'[0-9]+\s*(?:元|块)|退款|退费|违约金|手续费')
 
-async def _save_uploads(files: List[UploadFile]) -> List[str]:
+
+def _amount_notice(answer: str, checks: List[dict]) -> str:
+    """模型回答含金额时，先说明确定性条件核验是否通过。"""
+    if not checks or not _MONEY_IN_ANSWER.search(answer or ''):
+        return ''
+    blocked = [
+        item for item in checks
+        if item.get('status') in {'not_applicable', 'insufficient', 'conditional'}
+    ]
+    if not blocked:
+        return ''
+    details = '；'.join(
+        f"{item.get('clause_label', item.get('clause_type'))}：{item.get('status_label', '')}"
+        for item in blocked
+    )
+    return (
+        '【金额适用条件未全部满足】' + details
+        + '。以下回答中的金额不能直接作为结算依据，请先补齐条件或参数。'
+    )
+
+
+async def _save_uploads(files: List[UploadFile]) -> List[tuple]:
+    """保存上传文件，返回 (路径, 原始文件名) 列表，供问答与金额核验共用。"""
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    saved: List[str] = []
+    specs: List[tuple] = []
     for f in files:
         if not f.filename:
             continue
@@ -36,8 +61,15 @@ async def _save_uploads(files: List[UploadFile]) -> List[str]:
         data = await f.read()
         async with aiofiles.open(dest, 'wb') as out:
             await out.write(data)
-        saved.append(str(dest))
-    return saved
+        specs.append((str(dest), Path(f.filename).name))
+    return specs
+
+
+def _checks_for(specs: List[tuple]) -> List[dict]:
+    try:
+        return inspect_amounts(specs)
+    except Exception:  # noqa: BLE001 - 条件核验失败不能阻断问答
+        return []
 
 
 @router.post('/analyze', response_model=ContractAnalyzeResponse)
@@ -46,7 +78,8 @@ async def analyze(
     files: List[UploadFile] = File(...),
 ):
     """上传一份或多份材料 + 问题，返回合同核验回答。"""
-    saved = await _save_uploads(files)
+    specs = await _save_uploads(files)
+    saved = [path for path, _ in specs]
 
     try:
         answer = await run_in_threadpool(analyze_contract, saved, question)
@@ -55,10 +88,13 @@ async def analyze(
             status_code=503,
             detail='本地模型服务不可用。请确认 Ollama 已启动，且 qwen2.5:7b 已下载。',
         ) from exc
+    checks = await run_in_threadpool(_checks_for, specs)
     return ContractAnalyzeResponse(
         question=question,
         answer=answer,
         files=[Path(p).name for p in saved],
+        amount_checks=checks,
+        amount_notice=_amount_notice(answer, checks),
     )
 
 
@@ -68,13 +104,17 @@ async def analyze_stream(
     files: List[UploadFile] = File(...),
 ):
     """流式返回合同核验回答；事件类型为 chunk / done / error。"""
-    saved = await _save_uploads(files)
+    specs = await _save_uploads(files)
+    saved = [path for path, _ in specs]
 
     def event_generator():
+        answer = ''
         try:
             for text in analyze_contract_stream(saved, question):
+                answer = text
                 yield f"data: {json.dumps({'type': 'chunk', 'text': text}, ensure_ascii=False)}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'files': [Path(p).name for p in saved]}, ensure_ascii=False)}\n\n"
+            checks = _checks_for(specs)
+            yield f"data: {json.dumps({'type': 'done', 'files': [Path(p).name for p in saved], 'amount_checks': checks, 'amount_notice': _amount_notice(answer, checks)}, ensure_ascii=False)}\n\n"
         except ModelServiceError as exc:
             detail = '本地模型服务不可用。请确认 Ollama 已启动，且 qwen2.5:7b 已下载。'
             yield f"data: {json.dumps({'type': 'error', 'detail': detail}, ensure_ascii=False)}\n\n"

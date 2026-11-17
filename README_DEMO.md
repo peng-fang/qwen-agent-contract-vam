@@ -20,11 +20,15 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 ### 合同核验
 
-- 上传宣传材料与合同（PDF/Word/TXT）；
+- 上传宣传材料与合同：PDF / Word（.docx）/ TXT / MD；
 - 抽取退款、违约金、自动续费、服务期限、额外收费五类条款；
 - 判定“一致 / 矛盾 / 证据不足”；
 - 双栏 PDF 证据定位与关键词高亮；
-- MCP 工具计算退款、总成本、租房首期。
+- MCP 工具计算退款、总成本、租房首期；
+- 问答涉及金额时，先用确定性规则核验适用条件与参数；未通过则在回答前显示“金额适用条件未全部满足”，不把模型数字当作结算依据。
+
+> Word 支持来自 Qwen-Agent 的文档解析器（依赖 `python-docx`，已固定在 `requirements.txt`）。
+> 已用程序生成的 .docx 实测解析成功；但 `合同核验` 的完整回答仍需本地/远程模型。
 
 ### 合同风险审查
 
@@ -45,13 +49,27 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 ### 宣传 vs 合同
 
+- 输入格式：PDF / TXT / MD；**不支持 .docx**（条款抽取器会返回“不支持的格式：.docx”）；
 - 条款结构化抽取与跨文档匹配；
-- 五类条款逐项对照，标记一致 / 矛盾 / 缺失；
-- 点击“查看原文”打开 PDF 对应页，并高亮原文片段。
+- 五类条款逐项对照：主结论统一为「一致 / 矛盾 / 证据不足」三分类，表格同时给出六标签细分（一致、矛盾、合同未约定、宣传未提及、双方未约定、证据不足）；
+- 每条结论附 `evidence_id`（文档 ID + 页码 + 字符区间），可点击回查 PDF 页码，也可调用 `GET /api/contract/evidence/{evidence_id}` 按 ID 反查；
+- 确定性证据复核：逐条校验页码、字符区间、原文切片与字段重算是否自洽（不调用模型，也不是另一个 Agent）；
+- 合同风险评分与红线：按条款冲突、承诺未写进合同、自动续费无通知期等规则给出 0–100 分与红线清单；
+- 金额适用条件核验（确定性，不调用模型）：先校验退款资格、已上课节数上限（如 12 节）、申请期限、手续费/违约金是否叠加、实付金额与单价等条件，再给金额；
+  - 条件不满足：明确写“不适用”及原因，不给数字；
+  - 条件或参数不足：按情形分档（如 ≤12 节 / >12 节），每档给触发条件与公式，缺参数时金额为空；
+  - 每个金额和条件都带 `evidence_id`，可点击回查原文；无法定位的条件不进入计算。
+
+### 合同版本对比
+
+- 输入格式：PDF / TXT / MD；不支持 .docx；
+- 上传旧版与新版合同，按五类条款比较金额、比例、期限、通知期和条件；
+- 输出每类条款的新增 / 删除 / 变更 / 未变，并附两边可回查的证据 ID。
 
 ### 证据链
 
 - 条款对照页的证据可直接回查 PDF 页码；
+- 每条证据带稳定 `evidence_id`，支持按 ID 反查原文；
 - 合同核验定位到的 PDF 原文可带入必问清单，后端会按同一页复核引文；
 - 没有可回查页码时明确提示“未关联合同 PDF”，不编造证据。
 
@@ -70,20 +88,36 @@ FastAPI + Qwen-Agent + MCP + Ollama / DashScope
 
 课程评测可用同一组人工复核的租赁、消费服务和采购合同，对比直接问答、Qwen 清单和 Qwen 清单加 Intern 优先级。重点测前三项覆盖、引文支持和问题可执行性。
 
+> 情景推演（`/api/vam/*`）的后端接口与 `vam_sandbox/` 仍然保留，测试也仍在运行；前端已不再提供推演页面，主流程改为上面的条款核验与签约前清单。
+
 ## 启动
 
-### 1. 后端
+### 一键启动（离线包推荐）
 
 ```powershell
-cd backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+.\start.ps1              # 默认 8001，自动打开浏览器
+.\start.ps1 -NoBrowser   # 不打开浏览器
+.\start.ps1 -Python C:\path\to\python.exe   # 指定 Python 解释器
+.\start.bat               # 也可以直接双击
 ```
 
-> 端口使用 `8001`，因为本机 `8000` 已被其它项目占用。
+脚本会依次检查 Python 依赖、前端 `dist`，然后启动 FastAPI 并托管前端；按 Ctrl+C 停止。
+离线包已包含 `frontend/dist`，不需要联网执行 `npm install`。
 
-### 2. 前端开发模式
+启动后自检：
 
 ```powershell
+python scripts/smoke_api.py --base http://127.0.0.1:8001
+```
+
+### 开发模式（前后端分离）
+
+```powershell
+# 终端 1：后端
+cd backend
+..\.venv312\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
+
+# 终端 2：前端
 cd frontend
 npm install
 npm run dev
@@ -91,49 +125,89 @@ npm run dev
 
 打开：<http://localhost:5173>
 
-Vite 会把 `/api` 代理到 `http://127.0.0.1:8001`。
+> 端口使用 `8001`，因为本机 `8000` 已被其它项目占用。
 
-### 3. 生产模式
+### 离线与降级行为（均已实测）
 
-```powershell
-cd frontend
-npm run build
+| 场景 | 行为 |
+| --- | --- |
+| 没有 Ollama / DashScope，或评分服务不可用 | 条款对照、风险评分、证据复核、评测全部可用；情景评分默认 `cascade`（Intern 2B → 本地 Qwen），两者都不可用时接口返回 502 与中文提示（如“模型暂时未能生成可用情景，请检查模型服务后重试”），页面显示可读错误，不白屏 |
+| 后端停止、只托管前端静态文件 | 对照页给出「无法连接条款对照服务…请确认后端已在 8001 端口启动」的可读提示，控制台无未捕获异常 |
 
-cd ..\backend
-..\.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001
-```
-
-打开：<http://127.0.0.1:8001>
-
-FastAPI 会自动托管 `frontend/dist`。
+> 开发模式下 Vite 会把 `/api` 代理到 `127.0.0.1:8001`；生产/离线模式下由 FastAPI 直接托管 `frontend/dist`。
 
 ## 目录
 
 ```text
 backend/
   app/main.py                 # FastAPI 入口 + 静态托管
-  app/routers/                # contract / vam / evidence
-  app/services/               # Qwen-Agent 与 vam_sandbox 封装
+  app/routers/                # contract / clauses / checklist / vam / evidence
+  app/services/               # Qwen-Agent、clause、checklist 与 vam_sandbox 封装
   app/schemas.py
   requirements.txt
 
 frontend/
-  src/App.tsx                 # 三个页面：合同核验 / 宣传 vs 合同 / 签约前必问清单
+  src/App.tsx                 # 四个页面：合同核验 / 宣传 vs 合同 / 版本对比 / 必问清单
   src/components/
-    ContractPage.tsx          # 双栏 PDF 高亮
-    ClauseComparePage.tsx     # 宣传与合同条款对照
-    ChecklistPage.tsx         # 签约前必问清单
+    ContractPage.tsx          # 双栏 PDF 高亮 + 流式问答 + 金额条件提示
+    ClauseComparePage.tsx     # 五类条款对照 + 金额条件核验 + 风险评分 + 证据回查
+    VersionComparePage.tsx    # 合同版本对比
+    ChecklistPage.tsx         # 签约前必问清单（工作区共享文件）
+    ChecklistEvidenceLocator.tsx # 清单页 PDF 证据定位
+    ChecklistEstimate.tsx     # 清单条件金额试算
+    RentalReviewPanel.tsx     # 合同风险审查（分类/法域/流式）
+    AskAssistantDrawer.tsx    # 带问题问助手
+    MarkdownAnswer.tsx        # 模型回答 Markdown 渲染
     PdfViewer.tsx
+    EvidenceDrawer.tsx
     BrandLogo.tsx
     ui/                       # shadcn 风格基础组件
+  lib/                        # api / checklist / vam 类型与请求
   vite.config.ts
 
+clause_extraction/            # 规则抽取、跨文档匹配、evidence_id、金额条件核验、风险与版本对比
+rental_review/                # 合同类型识别、条款理解、风险审查、法律检索与 Judge
+vam_sandbox/                  # 两段式（发散 + 打分）推演流水线
 mcp_servers/contract_tools.py # 退款/租金计算 MCP 工具
+tests/                        # 条款、证据链、清单、风险审查、VAM 树等回归测试
+eval_data/                    # 调参 50 组 + 独立留出 40 组
+scripts/build_eval_dataset.py # 重建合成数据
+scripts/eval_clauses.py       # 调参集评测脚本（规则路径，真实跑分）
+scripts/eval_heldout.py       # 独立留出集评测脚本
+scripts/smoke_api.py          # 端到端冒烟自检
+start.ps1 / start.bat         # 一键启动
+reports/                      # 评测报告与看板（含 eval_heldout_*）
 ```
+
+## 评测（规则路径，真实跑分）
+
+- 验证环境：Python 3.12.14（依赖版本见 `requirements.txt`，均为该环境 `pip freeze` 的实测版本）；Node 22.22.2 / npm 10.9.1（仅重建前端时需要）。
+- 数据：`eval_data/` 50 组合成宣传/合同（40 组模板 + 10 组改写），标签见 `eval_data/labels.json`；
+- 脚本：`python scripts/eval_clauses.py`（不联网、不调用模型）；
+- 本次结果（2026-11-15，补充同义表达与日期换算规则后）：
+  - 条款抽取 Macro-F1 **1.000**（Precision 1.000 / Recall 1.000）；
+  - 跨文档匹配 Macro-F1 **1.000**（六标签）/ **1.000**（三分类），准确率 **1.000**；
+  - 证据定位准确率 **1.000**（304/304）；
+  - 分子集：模板 1.000 / 1.000 / 1.000；改写 1.000 / 1.000 / 1.000。
+- 报告：`reports/eval_report.md`；看板：`reports/eval_dashboard.html`；原始指标：`reports/eval_metrics.json`。
+
+说明：改写子集只有 10 组，本轮补充的关键词与换算规则正是针对这批表达，因此从 0.654 / 0.321 提升到 1.000 属于“覆盖了这批样本”，**不能**外推为真实合同的泛化能力。模板子集接近满分只代表实现一致性。
+
+独立留出集（40 组，口语/英文混写/跨句指代/嵌套条件/数字单位，冻结后未参与调参）基线：
+
+- 条款抽取 Macro-F1 **0.600**（P 1.000 / R 0.458）
+- 跨文档匹配 Macro-F1 **0.346**（六标签）/ **0.424**（三分类），准确率 **0.825**
+- 其中金标「矛盾」19 条只判对 1 条（Recall 0.053）
+- 报告：`reports/eval_heldout_report.md`；看板：`reports/eval_heldout_dashboard.html`
+
+这组数字才是规则路径换措辞后的真实水平：0.825 的准确率主要来自大量「双方未约定」，不能掩盖冲突召回极低。
 
 ## 已知限制
 
-1. 本地 `qwen2.5:7b` 会编造页码，证据定位仍以关键词高亮为主，后续应改为结构化 `evidence_id`。
-2. 7B 模型的评估分数存在波动，部分推演可能给出相同分数。
-3. 只支持可提取文本的 PDF；扫描件需要 OCR。
-4. 结果仅用于风险提示，不构成法律或投资意见。
+1. 规则抽取覆盖常见中文合同句式；独立留出集上冲突召回只有 0.053（19 条判对 1 条），方言、英文、指代和嵌套条件仍会漏判。模型抽取是可选增强，未配置模型时只用规则。
+2. 本地 7B 模型的评估分数存在波动，部分推演可能给出相同分数；三个子分数缺失时总分为「信息不足」。
+3. 条款对照与版本对比只支持可提取文本的 PDF / TXT / MD，不接受 .docx；Word 仅在 Qwen-Agent 的合同核验路径可用。扫描件需要 OCR。
+4. 评测数据为合成模板数据，数字只代表规则路径在该数据集上的表现，不代表真实合同分布；改写子集只有 10 组，且规则是针对这批表达补充的。
+5. 清单与情景评分依赖本地或远程模型；未配置模型时清单页会明确提示不可用，情景推演只有后端接口、前端无页面。
+6. 金额条件核验只覆盖退款与违约金的常见条件（节数上限、期限、手续费/违约金叠加、实付与单价）；地方性上限、机构自定义规则仍需人工确认。合同问答只在回答前提示“未通过核验”，不会删除模型已生成的数字。
+7. 结果仅用于风险提示，不构成法律或投资意见。

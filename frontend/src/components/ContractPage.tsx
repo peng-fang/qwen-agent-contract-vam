@@ -43,6 +43,7 @@ export function ContractPage({
 }: ContractPageProps) {
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
+  const [amountNotice, setAmountNotice] = useState('')
   const [streamAnswer, setStreamAnswer] = useState('')
   const [resultFiles, setResultFiles] = useState<string[]>([])
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -78,6 +79,7 @@ export function ContractPage({
   async function run() {
     setError('')
     setAnswer('')
+    setAmountNotice('')
     setStreamAnswer('')
     setMatches([])
     setFocusPage(null)
@@ -94,6 +96,7 @@ export function ContractPage({
     try {
       const res = await analyzeContractStream(question, files, setStreamAnswer)
       setAnswer(res.answer)
+      setAmountNotice(res.amount_notice || '')
       setResultFiles(res.files)
       setSelectedIndex(0)
     } catch (e) {
@@ -200,8 +203,15 @@ export function ContractPage({
               </p>
               {error && <div className="text-sm text-red-600">{error}</div>}
               {(answer || streamAnswer) && (
-                <div className="rounded-md border bg-muted/30 p-3">
-                  <MarkdownAnswer text={answer || streamAnswer} />
+                <div className="space-y-2">
+                  {amountNotice && (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                      {amountNotice}
+                    </div>
+                  )}
+                  <div className="rounded-md border bg-muted/30 p-3">
+                    <MarkdownAnswer text={answer || streamAnswer} />
+                  </div>
                 </div>
               )}
             </CardContent>

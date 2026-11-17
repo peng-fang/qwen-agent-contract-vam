@@ -2,13 +2,15 @@ import { useState } from 'react'
 import { ClauseComparePage } from './components/ClauseComparePage'
 import { ContractPage } from './components/ContractPage'
 import { ChecklistPage } from './components/ChecklistPage'
+import { VersionComparePage } from './components/VersionComparePage'
 import type { VamEvidenceInput } from './lib/api'
 
-type Tab = 'contract' | 'compare' | 'checklist'
+type Tab = 'contract' | 'compare' | 'versions' | 'checklist'
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'contract', label: '合同核验' },
   { key: 'compare', label: '宣传 vs 合同' },
+  { key: 'versions', label: '版本对比' },
   { key: 'checklist', label: '签约前必问清单' },
 ]
 
@@ -92,6 +94,7 @@ export default function App() {
             onRemoveChecklist={removeChecklist}
           />
         )}
+        {tab === 'versions' && <VersionComparePage />}
         <div hidden={tab !== 'checklist'}>
           <ChecklistPage
             key={checklistVersion}

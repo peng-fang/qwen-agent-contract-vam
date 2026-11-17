@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>条款抽取与匹配评测看板</title>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+         background: #f6f8fb; color: #1f2937; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 56px; }
+  h1 { font-size: 26px; margin: 0 0 6px; }
+  .sub { color: #6b7280; font-size: 13px; line-height: 1.7; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 14px; margin: 24px 0; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 16px; }
+  .card-title { font-size: 12px; color: #6b7280; }
+  .card-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; color: #1d4ed8; }
+  .card-note { font-size: 12px; color: #9ca3af; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+             padding: 18px; margin-top: 18px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eef1f5; padding: 8px; text-align: left; }
+  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
+  .note { font-size: 12px; color: #6b7280; line-height: 1.8; }
+  .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+           border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>条款抽取与跨文档匹配 · 评测看板</h1>
+  <div class="sub">
+    数据集：synthetic-contract-promo-v1 · 50 组
+    （模板 40 / 改写 10）<br>
+    运行路径：规则抽取 + 确定性匹配（未调用模型） · 数据为合成模板，非真实合同分布
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-title">条款抽取 Macro-F1</div><div class="card-value">1.000</div><div class="card-note">五类条款，文档级存在性</div></div>
+    <div class="card"><div class="card-title">匹配 Macro-F1（六标签）</div><div class="card-value">1.000</div><div class="card-note">一致/矛盾/四类缺失或证据不足</div></div>
+    <div class="card"><div class="card-title">匹配 Macro-F1（三分类）</div><div class="card-value">1.000</div><div class="card-note">一致/矛盾/证据不足</div></div>
+    <div class="card"><div class="card-title">证据定位准确率</div><div class="card-value">1.000</div><div class="card-note">304/304 条</div></div>
+  </div>
+
+  <div class="warn">
+    模板子集 40 组，匹配 Macro-F1 1.000；改写子集仅 10 组，匹配 Macro-F1 1.000。本轮规则补充与这 10 组改写高度重合，接近满分只说明覆盖了这批表达，不能推断真实合同分布。
+  </div>
+
+  <section>
+    <h2>分子集结果</h2>
+    <table>
+      <thead><tr><th>子集</th><th>案例</th><th>抽取 Macro-F1</th><th>匹配 Macro-F1</th><th>匹配准确率</th><th>证据定位</th></tr></thead>
+      <tbody><tr><td>模板</td><td>40</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td></tr><tr><td>改写</td><td>10</td><td>1.000</td><td>1.000</td><td>1.000</td><td>1.000</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>条款抽取（五类）</h2>
+    <table>
+      <thead><tr><th>条款</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+      <tbody><tr><td>退款</td><td>1.000</td><td>1.000</td><td>1.000</td></tr><tr><td>违约金</td><td>1.000</td><td>1.000</td><td>1.000</td></tr><tr><td>自动续费/续租</td><td>1.000</td><td>1.000</td><td>1.000</td></tr><tr><td>服务期限</td><td>1.000</td><td>1.000</td><td>1.000</td></tr><tr><td>额外收费</td><td>1.000</td><td>1.000</td><td>1.000</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>跨文档匹配（六标签）</h2>
+    <table>
+      <thead><tr><th>标签</th><th>Precision</th><th>Recall</th><th>F1</th><th>支持数</th></tr></thead>
+      <tbody><tr><td>一致</td><td>1.000</td><td>1.000</td><td>1.000</td><td>57</td></tr><tr><td>矛盾</td><td>1.000</td><td>1.000</td><td>1.000</td><td>53</td></tr><tr><td>合同未约定</td><td>1.000</td><td>1.000</td><td>1.000</td><td>34</td></tr><tr><td>宣传未提及</td><td>1.000</td><td>1.000</td><td>1.000</td><td>34</td></tr><tr><td>双方未约定</td><td>1.000</td><td>1.000</td><td>1.000</td><td>64</td></tr><tr><td>证据不足</td><td>1.000</td><td>1.000</td><td>1.000</td><td>8</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>混淆矩阵（行=金标，列=预测）</h2>
+    <table>
+      <thead><tr><th>金标 \ 预测</th><th>一致</th><th>矛盾</th><th>合同未约定</th><th>宣传未提及</th><th>双方未约定</th><th>证据不足</th></tr></thead>
+      <tbody><tr><th>一致</th><td>57</td><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><th>矛盾</th><td>0</td><td>53</td><td>0</td><td>0</td><td>0</td><td>0</td></tr><tr><th>合同未约定</th><td>0</td><td>0</td><td>34</td><td>0</td><td>0</td><td>0</td></tr><tr><th>宣传未提及</th><td>0</td><td>0</td><td>0</td><td>34</td><td>0</td><td>0</td></tr><tr><th>双方未约定</th><td>0</td><td>0</td><td>0</td><td>0</td><td>64</td><td>0</td></tr><tr><th>证据不足</th><td>0</td><td>0</td><td>0</td><td>0</td><td>0</td><td>8</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>口径与限制</h2>
+    <div class="note">
+      抽取指标：文档级判断某类条款是否被抽出。<br>
+      匹配指标：每个案例的五类条款与六标签金标比较；Macro-F1 只对金标中出现的标签取平均。<br>
+      证据定位：页码一致 + 字符区间回读等于 quote + quote 与金标句互相包含。<br>
+      只覆盖单页 txt；PDF 多页、扫描件、模型抽取路径未纳入本次评测。
+    </div>
+  </section>
+</div>
+</body>
+</html>

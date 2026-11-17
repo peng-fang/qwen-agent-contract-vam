@@ -116,10 +116,13 @@ export async function analyzeContract(question: string, files: File[]) {
   const form = new FormData()
   form.append('question', question)
   files.forEach((f) => form.append('files', f))
-  const res = await axios.post<{ question: string; answer: string; files: string[] }>(
-    '/api/contract/analyze',
-    form,
-  )
+  const res = await axios.post<{
+    question: string
+    answer: string
+    files: string[]
+    amount_checks: (AmountCheck & { clause_type: string; clause_label: string })[]
+    amount_notice: string
+  }>('/api/contract/analyze', form)
   return res.data
 }
 
@@ -154,6 +157,8 @@ export async function analyzeContractStream(
   let buffer = ''
   let answer = ''
   let resultFiles: string[] = []
+  let amountChecks: (AmountCheck & { clause_type: string; clause_label: string })[] = []
+  let amountNotice = ''
   while (true) {
     const { done, value } = await reader.read()
     if (done) break
@@ -168,19 +173,28 @@ export async function analyzeContractStream(
         text?: string
         detail?: string
         files?: string[]
+        amount_checks?: (AmountCheck & { clause_type: string; clause_label: string })[]
+        amount_notice?: string
       }
       if (payload.type === 'chunk' && typeof payload.text === 'string') {
         answer = payload.text
         onChunk(answer)
       } else if (payload.type === 'done') {
         resultFiles = payload.files ?? []
+        amountChecks = payload.amount_checks ?? []
+        amountNotice = payload.amount_notice ?? ''
       } else if (payload.type === 'error') {
         throw new Error(payload.detail || '核验失败')
       }
     }
   }
   if (!answer) throw new Error('核验流意外结束，请重试。')
-  return { answer, files: resultFiles }
+  return {
+    answer,
+    files: resultFiles,
+    amount_checks: amountChecks,
+    amount_notice: amountNotice,
+  }
 }
 
 export type RentalRegion = 'mainland' | 'hongkong'
@@ -406,7 +420,10 @@ export type ClauseVerdict =
   | 'missing_both'
   | 'unclear'
 
+export type ClauseVerdictGroup = 'consistent' | 'conflict' | 'insufficient'
+
 export interface ClauseEvidence {
+  evidence_id: string
   document_id: string
   filename: string
   role: string
@@ -444,15 +461,119 @@ export interface ClauseSide {
   evidences: ClauseEvidence[]
 }
 
+export type AmountStatus =
+  | 'applicable'
+  | 'conditional'
+  | 'insufficient'
+  | 'not_applicable'
+  | 'no_amount'
+
+export interface AmountCondition {
+  condition: string
+  met: boolean | null
+  evidence_id: string
+  quote: string
+}
+
+export interface AmountScenario {
+  label: string
+  condition: string
+  amount: number | null
+  formula: string
+  applicable: boolean | null
+  missing: string[]
+  evidence_ids: string[]
+}
+
+export interface AmountCheck {
+  status: AmountStatus
+  status_label: string
+  reason?: string
+  basis: AmountCondition[]
+  scenarios: AmountScenario[]
+  missing: string[]
+  method: string
+  note?: string
+}
+
 export interface ClauseMatch {
   clause_type: ClauseType
   clause_label: string
   verdict: ClauseVerdict
   verdict_label: string
+  verdict_group: ClauseVerdictGroup
+  verdict_group_label: string
   reasons: string[]
   promo: ClauseSide | null
   contract: ClauseSide | null
   compared: Record<string, unknown>
+  amount?: AmountCheck | null
+}
+
+export interface EvidenceReviewFailure {
+  evidence_id: string
+  clause_type: string
+  clause_label: string
+  page: number
+  filename: string
+  problems: string[]
+}
+
+export interface EvidenceReview {
+  method: string
+  checked: number
+  passed: number
+  failed: number
+  failures: EvidenceReviewFailure[]
+  note: string
+}
+
+export interface RiskRedline {
+  clause_type: string
+  clause_label: string
+  severity: 'high' | 'medium' | 'low'
+  reason: string
+  evidence_ids: string[]
+}
+
+export interface RiskAssessment {
+  score: number
+  level: 'high' | 'medium' | 'low'
+  level_label: string
+  redlines: RiskRedline[]
+  factors: string[]
+  method: string
+  note: string
+}
+
+export interface ResolvedEvidence {
+  evidence_id: string
+  document_id: string
+  filename: string
+  role: string
+  page: number
+  char_start: number
+  char_end: number
+  quote: string
+  context: string
+  verified: boolean
+}
+
+export interface VersionDiffRow {
+  clause_type: ClauseType
+  clause_label: string
+  status: 'added' | 'removed' | 'changed' | 'unchanged'
+  changes: { field: string; old: unknown; new: unknown }[]
+  old: { clause_count: number; evidences: ClauseEvidence[] }
+  new: { clause_count: number; evidences: ClauseEvidence[] }
+}
+
+export interface VersionCompareResult {
+  old_document: { document_id: string; filename: string }
+  new_document: { document_id: string; filename: string }
+  summary: { added: number; removed: number; changed: number; unchanged: number }
+  rows: VersionDiffRow[]
+  method: string
 }
 
 export interface ClauseExtractionResult {
@@ -467,6 +588,8 @@ export interface ClauseExtractionResult {
   matches: ClauseMatch[]
   extractor: string
   warnings: string[]
+  evidence_review: EvidenceReview
+  risk: RiskAssessment
 }
 
 export async function extractClauses(files: File[], roles?: string[]) {
@@ -474,5 +597,20 @@ export async function extractClauses(files: File[], roles?: string[]) {
   files.forEach((file) => form.append('files', file))
   if (roles?.length) form.append('roles', roles.join(','))
   const res = await axios.post<ClauseExtractionResult>('/api/contract/clauses', form)
+  return res.data
+}
+
+export async function resolveEvidence(evidenceId: string) {
+  const res = await axios.get<ResolvedEvidence>(
+    `/api/contract/evidence/${encodeURIComponent(evidenceId)}`,
+  )
+  return res.data
+}
+
+export async function compareContractVersions(oldFile: File, newFile: File) {
+  const form = new FormData()
+  form.append('old_file', oldFile)
+  form.append('new_file', newFile)
+  const res = await axios.post<VersionCompareResult>('/api/contract/versions', form)
   return res.data
 }

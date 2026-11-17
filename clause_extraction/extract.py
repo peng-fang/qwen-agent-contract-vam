@@ -17,17 +17,28 @@ from .schema import Clause, ClauseType, Document, EvidenceSpan, PageText
 # ---------------------------------------------------------------------------
 
 CLAUSE_KEYWORDS: Dict[ClauseType, Tuple[str, ...]] = {
-    ClauseType.REFUND: ('退费', '退款', '退还', '退卡', '退租', '退课'),
-    ClauseType.PENALTY: ('违约金', '违约责任', '提前解除', '提前终止', '提前退租', '毁约'),
-    ClauseType.AUTO_RENEWAL: (
-        '自动续费', '自动续租', '视为同意续费', '视为同意续租', '续费一年', '续租一年',
+    ClauseType.REFUND: ('退费', '退款', '退还', '退卡', '退租', '退课', '返还'),
+    ClauseType.PENALTY: (
+        '违约金', '违约责任', '违约费用', '违约赔偿', '罚金', '赔偿金',
+        '提前解除', '提前终止', '提前退租', '提前退课', '毁约',
     ),
-    ClauseType.SERVICE_TERM: ('服务期限', '合同期限', '租赁期限', '租期', '有效期', '服务期'),
+    ClauseType.AUTO_RENEWAL: (
+        '自动续费', '自动续租', '自动扣费', '自动扣款', '自动展期', '自动延期',
+        '视为同意续费', '视为同意续租', '续费一年', '续租一年', '到期自动', '期满自动',
+        '不会扣款', '无需续费', '不自动续费', '不自动续租',
+    ),
+    ClauseType.SERVICE_TERM: (
+        '服务期限', '合同期限', '租赁期限', '租期', '有效期', '服务期', '服务周期',
+        '课程共', '课程时长', '课程为期', '学习期', '会员期',
+    ),
     ClauseType.EXTRA_FEE: (
-        '其他费用', '额外收费', '另行收费', '储物柜', '体测', '改约',
-        '管理费', '物业费', '网费', '清洁费', '维修费', '印花税',
+        '其他费用', '额外收费', '另行收费', '另行收取', '另收', '附加费', '杂费',
+        '教材费', '服装费', '材料费', '资料费', '无需另付',
+        '储物柜', '体测', '改约', '管理费', '物业费', '网费', '清洁费', '维修费', '印花税',
     ),
 }
+
+_PENALTY_WORDS = ('违约金', '违约责任', '违约费用', '违约赔偿', '罚金', '赔偿金')
 
 _SENTENCE_END = '。；;！？'
 _CLAUSE_REF_RE = re.compile(r'第[一二三四五六七八九十百零]+条')
@@ -37,7 +48,7 @@ _PERCENT_RE = re.compile(r'(\d+(?:\.\d+)?)\s*%')
 _MONEY_RE = re.compile(r'(?:人民币|港币|HK\$|￥|¥)?\s*(\d[\d,]*(?:\.\d+)?)\s*元')
 _PER_UNIT_RE = re.compile(r'(\d[\d,]*(?:\.\d+)?)\s*元\s*/\s*(年|月|次|节|课时|天)')
 _PER_SESSION_RE = re.compile(r'每\s*(?:节|课时|次)\s*(\d[\d,]*(?:\.\d+)?)\s*元')
-_DURATION_RE = re.compile(r'([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(个月|年|月|日|天)')
+_DURATION_RE = re.compile(r'([0-9]{1,3}|[一二两三四五六七八九十]{1,3})\s*(个月|年|月|周|星期|日|天)')
 _NOTICE_RE = re.compile(r'(?:届满前|提前|于)\s*(\d{1,3})\s*(?:个)?(?:工作日|日|天)')
 _CAP_RE = re.compile(r'超过\s*(\d{1,3})\s*(?:节|课时|次).{0,8}?(?:不支持|不予|不能|拒绝).{0,4}?退')
 
@@ -152,14 +163,21 @@ def extract_fields(text: str) -> Dict[str, Any]:
         conditions.append('written_notice')
 
     flags = {
-        'full_refund': bool(re.search(r'全额退|无条件退', masked)),
+        'full_refund': bool(re.search(r'全额退|无条件退|全额返还|无理由退', masked)),
         'free_of_charge': bool(re.search(
-            r'不(?:再)?(?:收取|收).{0,6}手续费|无任何额外收费|全部免费|绝不收取|零手续费', masked)),
-        'auto_renewal': bool(re.search(r'自动续费|自动续租|视为同意续费|视为同意续租', masked))
-        and not bool(re.search(r'不自动续费|不自动续租|无需自动续费', masked)),
-        'no_auto_renewal': bool(re.search(r'不自动续费|不自动续租|不设.{0,4}续租', masked)),
-        'refundable': bool(re.search(r'可.{0,4}退费|支持退费|随时退', masked))
-        and not bool(re.search(r'不支持退费|不予退费', masked)),
+            r'不(?:再)?(?:收取|收|扣).{0,6}(?:手续费|费用|费)|无需另(?:付|收)|不必另付'
+            r'|无任何额外收费|全部免费|绝不收取|零手续费|已包含在|含在.{0,4}内|一价全包', masked)),
+        'auto_renewal': bool(re.search(
+            r'自动续费|自动续租|自动扣费|自动扣款|自动展期|自动延期|视为同意续费|视为同意续租', masked))
+        and not bool(re.search(r'不自动续费|不自动续租|无需自动续费|不会扣款|不扣款', masked)),
+        'no_auto_renewal': bool(re.search(
+            r'不自动续费|不自动续租|不设.{0,4}续租|不会扣款|不扣款|到期自动结束|无需续费', masked)),
+        'no_penalty': bool(re.search(
+            r'(?:不|无需|免)(?:收取|支付|承担|须|需)?[^，。；]{0,6}(?:违约金|违约费用|违约赔偿|罚金|赔偿金)'
+            r'|无(?:额外|任何)?(?:违约金|违约费用|罚金|赔偿金)', masked)),
+        'refundable': bool(re.search(
+            r'可.{0,6}退(?:费|款|课)|支持退(?:费|款|课)|随时退|无理由退', masked))
+        and not bool(re.search(r'不支持退(?:费|款|课)|不予退(?:费|款|课)|不退(?:费|款|课)', masked)),
     }
     flags = {key: value for key, value in flags.items() if value}
 
@@ -247,6 +265,11 @@ def extract_document(document: Document) -> List[Clause]:
                     continue
                 # "服务期限届满前"是时间状语，不是服务期限条款本身
                 if clause_type == ClauseType.SERVICE_TERM and not _SERVICE_TERM_DEFINITION_RE.search(sentence):
+                    continue
+                # "提前退课需支付违约金"是违约责任，不是退款条款
+                if (clause_type == ClauseType.REFUND
+                        and any(word in sentence for word in _PENALTY_WORDS)
+                        and not any(word in sentence for word in ('退费', '退款', '退还'))):
                     continue
                 clauses.append(build_clause(
                     document, page, clause_type, start, end, index_map,

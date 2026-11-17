@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>独立留出集评测看板</title>
+<style>
+  body { margin: 0; background: #f6f7f9; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; color: #111827; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  .sub { font-size: 13px; color: #6b7280; line-height: 1.8; }
+  .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+  .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 14px; }
+  .card-title { font-size: 12px; color: #6b7280; }
+  .card-value { font-size: 28px; font-weight: 700; margin: 6px 0 2px; color: #1d4ed8; }
+  .card-note { font-size: 12px; color: #9ca3af; }
+  section { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px; margin-top: 18px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { border-bottom: 1px solid #eef1f5; padding: 8px; text-align: left; }
+  th { color: #6b7280; font-weight: 600; background: #f9fafb; }
+  .warn { background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+           border-radius: 8px; padding: 10px 12px; font-size: 13px; line-height: 1.7; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>独立留出集 · 规则路径评测</h1>
+  <div class="sub">
+    数据集：clause-holdout-v1 · 40 组 · 冻结于 2026-11-15<br>
+    与调参集刻意错开：口语/方言、英文混写、跨句指代、嵌套条件、数字单位
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-title">抽取 Macro-F1</div><div class="card-value">0.600</div><div class="card-note">Recall 0.458</div></div>
+    <div class="card"><div class="card-title">匹配 Macro-F1（六标签）</div><div class="card-value">0.346</div><div class="card-note">独立留出集基线</div></div>
+    <div class="card"><div class="card-title">匹配 Macro-F1（三分类）</div><div class="card-value">0.424</div><div class="card-note">一致/矛盾/证据不足</div></div>
+    <div class="card"><div class="card-title">匹配准确率</div><div class="card-value">0.825</div><div class="card-note">35 条错误</div></div>
+  </div>
+
+  <div class="warn">
+    这是留出集基线，冻结后未据此改规则。数字明显低于调参集，说明调参集 1.000 主要来自规则与样本重合。
+  </div>
+
+  <section>
+    <h2>分类别结果</h2>
+    <table>
+      <thead><tr><th>类别</th><th>案例</th><th>抽取 Macro-F1</th><th>抽取 Recall</th><th>匹配 Macro-F1</th><th>匹配准确率</th></tr></thead>
+      <tbody><tr><td>方言 / 口语</td><td>8</td><td>0.381</td><td>0.286</td><td>0.188</td><td>0.800</td></tr><tr><td>英文 / 中英混写</td><td>8</td><td>0.367</td><td>0.286</td><td>0.188</td><td>0.800</td></tr><tr><td>跨句指代</td><td>8</td><td>0.567</td><td>0.500</td><td>0.524</td><td>0.850</td></tr><tr><td>复杂嵌套条件</td><td>8</td><td>0.700</td><td>0.571</td><td>0.344</td><td>0.850</td></tr><tr><td>数字与单位新写法</td><td>8</td><td>0.594</td><td>0.625</td><td>0.439</td><td>0.825</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>条款抽取（五类）</h2>
+    <table>
+      <thead><tr><th>条款</th><th>Precision</th><th>Recall</th><th>F1</th></tr></thead>
+      <tbody><tr><td>退款</td><td>1.000</td><td>0.632</td><td>0.774</td></tr><tr><td>违约金</td><td>1.000</td><td>0.462</td><td>0.632</td></tr><tr><td>自动续费/续租</td><td>1.000</td><td>0.364</td><td>0.533</td></tr><tr><td>服务期限</td><td>1.000</td><td>0.571</td><td>0.727</td></tr><tr><td>额外收费</td><td>1.000</td><td>0.200</td><td>0.333</td></tr></tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>口径</h2>
+    <div class="sub">
+      与调参集报告完全一致：抽取是文档级存在性；匹配是五类条款 × 六标签；证据定位要求页码、区间回读与金标句一致。<br>
+      本集为人工构造的 40 组单页文本，仍不是真实合同分布；规则不可识别的表达见 Markdown 报告「天花板」一节。
+    </div>
+  </section>
+</div>
+</body>
+</html>

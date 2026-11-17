@@ -9,6 +9,8 @@ class ContractAnalyzeResponse(BaseModel):
     question: str
     answer: str
     files: List[str]
+    amount_checks: List[Dict[str, Any]] = Field(default_factory=list)
+    amount_notice: str = ''
 
 
 class HealthResponse(BaseModel):
@@ -121,6 +123,34 @@ class ClauseExtractionResponse(BaseModel):
     matches: List[Dict[str, Any]]
     extractor: str
     warnings: List[str]
+    evidence_review: Dict[str, Any]
+    risk: Dict[str, Any]
+
+
+class EvidenceResolveResponse(BaseModel):
+    evidence_id: str
+    document_id: str
+    filename: str
+    role: str
+    page: int
+    char_start: int
+    char_end: int
+    quote: str
+    context: str
+    verified: bool
+
+
+class VersionDiffDocument(BaseModel):
+    document_id: str
+    filename: str
+
+
+class VersionCompareResponse(BaseModel):
+    old_document: VersionDiffDocument
+    new_document: VersionDiffDocument
+    summary: Dict[str, int]
+    rows: List[Dict[str, Any]]
+    method: str
 
 
 class RentalReviewResponse(BaseModel):
