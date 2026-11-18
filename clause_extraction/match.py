@@ -12,7 +12,10 @@ from typing import Any, Dict, List, Optional, Tuple
 from .extract import clauses_by_type
 from .schema import Clause, ClauseType, Document, DocRole, MatchResult, Verdict
 
-_UNIT_ORDER = {'年': 0, '个月': 1, '月': 2, '次': 3, '节': 4, '课时': 5, '天': 6}
+_UNIT_ORDER = {
+    '年': 0, '个月': 1, '月': 2, '次': 3, '节': 4, '课时': 5,
+    '天': 6, '周': 7, '学期': 8, '学年': 9, '季度': 10, '期': 11, '人': 12,
+}
 
 
 def _unit_key(item: Dict[str, Any]) -> tuple:
@@ -122,6 +125,14 @@ def _match_refund(
     promo_flags = promo_fields['flags']
     contract_caps = [c for c in contract_fields['conditions'] if c.endswith(':no_refund')]
 
+    if contract_fields['flags'].get('no_refund') and (
+        promo_flags.get('full_refund') or promo_flags.get('refundable')
+    ):
+        reasons.append('宣传承诺可退款，合同声明不可退款')
+    if promo_flags.get('no_refund') and (
+        contract_fields['flags'].get('full_refund') or contract_fields['flags'].get('refundable')
+    ):
+        reasons.append('宣传声明不可退款，合同承诺可退款')
     if promo_flags.get('full_refund') and contract_rates:
         reasons.append(
             f'宣传承诺全额退款，合同约定扣除 {_format_rates(contract_rates)} 手续费'
