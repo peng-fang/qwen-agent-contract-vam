@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import argparse
 import html
 import json
 import sys
@@ -38,7 +39,8 @@ DATA = ROOT / 'eval_data' / 'heldout'
 REPORTS = ROOT / 'reports'
 CATEGORY_LABELS = {
     'dialect': '方言 / 口语',
-    'english': '英文 / 中英混写',
+    'english': '英文',
+    'mixed': '中英混写',
     'coref': '跨句指代',
     'nested': '复杂嵌套条件',
     'numeric': '数字与单位新写法',
@@ -47,10 +49,14 @@ CATEGORY_LABELS = {
 
 def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
                     by_category: Dict[str, Dict[str, Any]],
-                    tuning: Optional[Dict[str, Any]] = None) -> str:
+                    tuning: Optional[Dict[str, Any]] = None,
+                    legacy: Optional[Dict[str, Any]] = None,
+                    dataset_key: str = 'heldout') -> str:
     generated = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    second = dataset_key != 'heldout'
     lines = [
-        '# 独立留出集评测报告（规则路径）',
+        '# 第二批独立留出集评测报告（规则路径）' if second
+        else '# 独立留出集评测报告（规则路径）',
         '',
         f'- 运行时间：{generated}',
         f"- 数据集：{labels['dataset']}（{labels['description']}）",
@@ -75,7 +81,7 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
     if tuning:
         tune_overall = tuning['overall']
         lines += [
-            '### 与调参集对比',
+            '### 与调参集、旧留出集对比',
             '',
             '| 数据集 | 案例 | 抽取 Macro-F1 | 匹配 Macro-F1（六标签） | 匹配准确率 |',
             '| --- | ---: | ---: | ---: | ---: |',
@@ -83,7 +89,17 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
             f"{_fmt(tune_overall['extraction']['overall']['macro_f1'])} | "
             f"{_fmt(tune_overall['matching']['macro_f1_6'])} | "
             f"{_fmt(tune_overall['matching']['accuracy'])} |",
-            f"| 独立留出集（本报告） | {overall['case_count']} | "
+        ]
+        if legacy:
+            legacy_overall = legacy['overall']
+            lines.append(
+                f"| 旧留出集 v1（已作调试参考，非干净基线） | {legacy_overall['case_count']} | "
+                f"{_fmt(legacy_overall['extraction']['overall']['macro_f1'])} | "
+                f"{_fmt(legacy_overall['matching']['macro_f1_6'])} | "
+                f"{_fmt(legacy_overall['matching']['accuracy'])} |"
+            )
+        lines += [
+            f"| 本留出集（{'v2，干净基线' if second else 'v1'}） | {overall['case_count']} | "
             f"{_fmt(overall['extraction']['overall']['macro_f1'])} | "
             f"{_fmt(overall['matching']['macro_f1_6'])} | "
             f"{_fmt(overall['matching']['accuracy'])} |",
@@ -91,6 +107,12 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
             '两者差距说明：调参集 1.000 主要来自规则与样本表达重合，不能代表换措辞后的真实表现。',
             '',
         ]
+        if second:
+            lines += [
+                '> 旧留出集 v1 含方言/英文样本，本轮扩展规则时已查看其表达，因此不再作为干净基线；'
+                'v1 数字仅用于说明“规则覆盖前后的变化”，真实基线以本集为准。',
+                '',
+            ]
     lines += [
         '## 二、分类别结果',
         '',
@@ -162,6 +184,29 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
         overall['matching']['confusion']['consistent'][pred] for pred in insufficient
     )
 
+    if second:
+        ceiling = [
+            '- **方言/口语**：已覆盖 `退钱`、`扣钱`、`不加钱`、`顺延`、`赔/罚钱` 等常见说法；'
+            '但一义多词、地区差异和长句仍会漏，尤其是否定与金额同句时的极性判断。',
+            '- **英文/中英混写**：已支持 refund、cancellation fee、auto-renewal、service term、'
+            'additional fee 等词表与 percent/per month 单位；生僻同义词和长英文从句仍会漏。',
+            '- **跨句指代**：抽取仍按句进行，`前述费用`、`该条款`、`该期限` 的指代对象无法回指，'
+            '费用或期限可能归错条款或只抓到前一句。',
+            '- **复杂嵌套条件**：规则不解析逻辑结构，`除非…否则…`、`只要…就…`、`若 A 且非 B` 的极性可能读反，'
+            '把「有条件不收费」误判为「一致」或「证据不足」。',
+            '- **数字与单位**：已归一 `百分之五`、`两成/三成`、`一百元`、`元/期`、`元/节`、'
+            '`per month`、`HKD` 等；浮动价格、阶梯价和复合单位仍不归一。',
+        ]
+    else:
+        ceiling = [
+            '- **方言/口语**：`退钱`、`扣钱`、`不加钱`、`顺延`、`赔` 等不在词表；规则会把真实冲突判成「双方未约定」。',
+            '- **英文/中英混写**：没有英文词表，整段英文条款等于不可见；混写时只能命中中文半边。',
+            '- **跨句指代**：抽取按句进行，`前述手续费`、`该条款`、`该周期` 的指代对象无法回指，费用或期限会归错条款。',
+            '- **复杂嵌套条件**：规则不解析逻辑结构，`除非…否则…`、`只要…就…`、`若 A 且非 B` 的极性可能被读反，'
+            '把「有条件不收费」误判为「一致」或「证据不足」。',
+            '- **数字与单位**：`百分之五`、`两成`、`三成`、`一百元`、`元/期`、`元/节` 不能归一，'
+            '缺少比例或金额时匹配只能落到「证据不足」。',
+        ]
     lines += [
         '',
         '## 六、规则路径的天花板',
@@ -171,13 +216,7 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
         f"- 金标为「一致」的 {consistent_total} 条中，正确判为一致 "
         f"{overall['matching']['confusion']['consistent']['consistent']} 条，"
         f"{consistent_missed} 条被降级为缺失或证据不足。",
-        '- **方言/口语**：`退钱`、`扣钱`、`不加钱`、`顺延`、`赔` 等不在词表；规则会把真实冲突判成「双方未约定」。',
-        '- **英文/中英混写**：没有英文词表，整段英文条款等于不可见；混写时只能命中中文半边。',
-        '- **跨句指代**：抽取按句进行，`前述手续费`、`该条款`、`该周期` 的指代对象无法回指，费用或期限会归错条款。',
-        '- **复杂嵌套条件**：规则不解析逻辑结构，`除非…否则…`、`只要…就…`、`若 A 且非 B` 的极性可能被读反，'
-        '把「有条件不收费」误判为「一致」或「证据不足」。',
-        '- **数字与单位**：`百分之五`、`两成`、`三成`、`一百元`、`元/期`、`元/节` 不能归一，'
-        '缺少比例或金额时匹配只能落到「证据不足」。',
+        *ceiling,
         '',
         '现实含义：规则路径适合做召回兜底和可回查证据，不适合单独承担真实合同的合规判断；'
         '上述缺口会把真实冲突漏成「证据不足」，需要模型抽取 + 人工复核补位。',
@@ -192,7 +231,8 @@ def render_markdown(labels: Dict[str, Any], overall: Dict[str, Any],
 
 
 def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
-                     by_category: Dict[str, Dict[str, Any]]) -> str:
+                     by_category: Dict[str, Dict[str, Any]],
+                     dataset_key: str = 'heldout') -> str:
     def card(title: str, value: str, note: str) -> str:
         return (
             '<div class="card"><div class="card-title">' + html.escape(title)
@@ -240,7 +280,7 @@ def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
 </head>
 <body>
 <div class="wrap">
-  <h1>独立留出集 · 规则路径评测</h1>
+  <h1>独立留出集 · 规则路径评测{' · 第二批' if dataset_key != 'heldout' else ''}</h1>
   <div class="sub">
     数据集：{html.escape(labels['dataset'])} · {labels['case_count']} 组 · 冻结于 {labels['created_at']}<br>
     与调参集刻意错开：口语/方言、英文混写、跨句指代、嵌套条件、数字单位
@@ -254,7 +294,7 @@ def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
   </div>
 
   <div class="warn">
-    这是留出集基线，冻结后未据此改规则。数字明显低于调参集，说明调参集 1.000 主要来自规则与样本重合。
+    {'这是第二批干净基线：规则扩展完成后先冻结标签、再运行一次，未据此回改。旧留出集 v1 已作调试参考，不再作为干净基线。' if dataset_key != 'heldout' else '这是留出集基线，冻结后未据此改规则。数字明显低于调参集，说明调参集 1.000 主要来自规则与样本重合。'}
   </div>
 
   <section>
@@ -287,7 +327,17 @@ def render_dashboard(labels: Dict[str, Any], overall: Dict[str, Any],
 
 
 def main() -> None:
-    labels = json.loads((DATA / 'labels.json').read_text(encoding='utf-8'))
+    parser = argparse.ArgumentParser(description='独立留出集评测（规则路径）')
+    parser.add_argument('--dataset', default='heldout',
+                        help='eval_data 下的数据集目录，例如 heldout 或 heldout_v2')
+    parser.add_argument('--prefix', default=None,
+                        help='报告文件名前缀，默认 eval_<dataset>')
+    args = parser.parse_args()
+
+    data_dir = ROOT / 'eval_data' / args.dataset
+    prefix = args.prefix or ('eval_heldout' if args.dataset == 'heldout'
+                             else f'eval_{args.dataset}')
+    labels = json.loads((data_dir / 'labels.json').read_text(encoding='utf-8'))
     cases: List[Dict[str, Any]] = labels['cases']
     categories = list(labels['splits'])
 
@@ -295,6 +345,9 @@ def main() -> None:
     by_category = {name: evaluate(cases, name) for name in categories}
     tuning_path = REPORTS / 'eval_metrics.json'
     tuning = json.loads(tuning_path.read_text(encoding='utf-8')) if tuning_path.exists() else None
+    legacy_path = REPORTS / 'eval_heldout_metrics.json'
+    legacy = (json.loads(legacy_path.read_text(encoding='utf-8'))
+              if prefix != 'eval_heldout' and legacy_path.exists() else None)
 
     REPORTS.mkdir(parents=True, exist_ok=True)
     metrics = {
@@ -317,17 +370,21 @@ def main() -> None:
         'by_category': by_category,
         'rule_changes_after_holdout': [],
     }
-    (REPORTS / 'eval_heldout_metrics.json').write_text(
+    (REPORTS / f'{prefix}_metrics.json').write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2), encoding='utf-8',
     )
-    (REPORTS / 'eval_heldout_report.md').write_text(
-        render_markdown(labels, overall, by_category, tuning), encoding='utf-8',
+    (REPORTS / f'{prefix}_report.md').write_text(
+        render_markdown(labels, overall, by_category, tuning,
+                        legacy=legacy, dataset_key=args.dataset),
+        encoding='utf-8',
     )
-    (REPORTS / 'eval_heldout_dashboard.html').write_text(
-        render_dashboard(labels, overall, by_category), encoding='utf-8',
+    (REPORTS / f'{prefix}_dashboard.html').write_text(
+        render_dashboard(labels, overall, by_category, dataset_key=args.dataset),
+        encoding='utf-8',
     )
 
-    print('==== 独立留出集基线（规则路径，未调用模型） ====')
+    title = ('第二批独立留出集' if args.dataset != 'heldout' else '独立留出集')
+    print(f'==== {title}基线（规则路径，未调用模型） ====')
     print(f"案例数：{overall['case_count']}")
     print(f"条款抽取 Macro-F1：{overall['extraction']['overall']['macro_f1']:.3f} "
           f"(P {overall['extraction']['overall']['precision']:.3f} / "
