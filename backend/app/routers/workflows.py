@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, FiniteFloat
 
 from app.services import workflow_store as store, report_dialogue, verification_tasks
 from app.services.workflow_llm import ModelUnavailable
+from app.services import payment_plans
 
 router = APIRouter(prefix='/api/workflows', tags=['workflows'])
 
@@ -74,3 +75,33 @@ def add_facts(task_id: str, req: Supplement):
     return execute(verification_tasks.supplement, task_id, req.facts.model_dump(exclude_none=True), req.revision)
 
 
+class PaymentRequest(BaseModel):
+    plans: list[payment_plans.Plan] = Field(min_length=2, max_length=4)
+    id: str | None = Field(None, pattern=r'^[a-f0-9]{32}$')
+    revision: int | None = Field(None, ge=1)
+
+
+@router.post('/payments')
+def payments(req: PaymentRequest):
+    return execute(payment_plans.save_plans, req.plans, req.id, req.revision)
+
+
+@router.get('/payments/{record_id}')
+def get_payments(record_id: str):
+    return execute(store.get, 'payments', record_id)
+
+
+@router.post('/payment-draft')
+def payment_draft(file: UploadFile = File(...)):
+    from pathlib import Path
+    import tempfile
+    suffix = Path(file.filename or '').suffix.lower()
+    if suffix not in {'.pdf', '.docx', '.txt', '.md'}:
+        raise HTTPException(422, '请选择 PDF、DOCX、TXT、MD 文件')
+    content = file.file.read(10 * 1024 * 1024 + 1)
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(422, '文件不能超过10MB')
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / ('payment' + suffix)
+        path.write_bytes(content)
+        return execute(payment_plans.extract, str(path), Path(file.filename).name)
