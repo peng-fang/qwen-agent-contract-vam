@@ -245,6 +245,7 @@ export interface RentalRisk {
 }
 
 export interface RentalReviewResult {
+  report_id?: string
   filename: string
   file_id?: string | null
   file_type: string
@@ -577,6 +578,8 @@ export interface VersionCompareResult {
 }
 
 export interface ClauseExtractionResult {
+  task_id?: string
+  task_revision?: number
   documents: {
     document_id: string
     file_id?: string

@@ -17,7 +17,7 @@ if str(ROOT) not in sys.path:
 from rental_review import review_contract  # noqa: E402
 
 CACHE_DIR = ROOT / 'backend' / 'cache' / 'reviews'
-CACHE_VERSION = '11'
+CACHE_VERSION = '12'
 
 
 def _cache_enabled() -> bool:
@@ -34,7 +34,10 @@ def _cache_ttl_seconds() -> int:
 
 def _cache_key(path: str, region: str, contract_type: str, use_llm: bool) -> str:
     digest = hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    raw = f'{CACHE_VERSION}|{digest}|{region}|{contract_type}|{int(use_llm)}'
+    model_settings = {k: os.getenv(k, '') for k in (
+        'REVIEW_MODEL_PROVIDER', 'WORKFLOW_MODEL', 'OPENAI_MODEL', 'ANALYZE_MODEL',
+        'JUDGE_MODEL', 'JUDGE_FAST_MODEL', 'OLLAMA_MODEL', 'OLLAMA_BASE_URL')}
+    raw = f'{CACHE_VERSION}|{digest}|{region}|{contract_type}|{int(use_llm)}|{json.dumps(model_settings, sort_keys=True)}'
     return hashlib.sha256(raw.encode()).hexdigest()
 
 
@@ -104,7 +107,8 @@ def run(
         progress=progress,
     )
     result['cache_hit'] = False
-    if key:
+    degraded = any('模型分析失败' in warning or 'Judge Agent 未返回' in warning for warning in result.get('warnings', []))
+    if key and not degraded:
         _write_cache(key, result)
     return result
 

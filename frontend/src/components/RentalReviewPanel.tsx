@@ -312,7 +312,7 @@ export function RentalReviewPanel({
   onRemoveChecklist,
 }: {
   files: File[]
-  onAsk?: (context: AskRiskContext, risks: RentalRisk[]) => void
+  onAsk?: (context: AskRiskContext, risks: RentalRisk[], reportId?: string) => void
   checklistEvidence?: VamEvidenceInput[]
   onAddChecklist?: (evidence: VamEvidenceInput | VamEvidenceInput[]) => void
   onRemoveChecklist?: (evidence: VamEvidenceInput) => void
@@ -632,7 +632,7 @@ export function RentalReviewPanel({
                       key={risk.risk_id}
                       risk={risk}
                       onOpen={setEvidence}
-                      onAsk={(context) => onAsk?.(context, result.risks)}
+                      onAsk={(context) => onAsk?.(context, result.risks, result.report_id)}
                       checklistAdded={added}
                       onToggleChecklist={evidenceForChecklist ? () => {
                         if (added) onRemoveChecklist?.(evidenceForChecklist)

@@ -2,25 +2,23 @@ import { useEffect, useRef, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { analyzeContract, type RentalRisk } from '@/lib/api'
+import { type RentalRisk } from '@/lib/api'
+import { openConversation, askReport, workflowError, type Conversation } from '@/lib/workflows'
 import type { AskRiskContext } from './RentalReviewPanel'
-
-interface ChatMessage {
-  role: 'user' | 'assistant'
-  content: string
-  riskTitles?: string[]
-}
 
 interface AskAssistantDrawerProps {
   open: boolean
+  reportId: string | null
   context: AskRiskContext | null
   risks: RentalRisk[]
   files: File[]
   onClose: () => void
 }
 
-export function AskAssistantDrawer({ open, context, risks, files, onClose }: AskAssistantDrawerProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+export function AskAssistantDrawer({ open, reportId, context, risks, onClose }: AskAssistantDrawerProps) {
+  const [messages, setMessages] = useState<Conversation['messages']>([])
+  const [chat, setChat] = useState<Conversation | null>(null)
+  const activeChat = useRef('')
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -37,8 +35,19 @@ export function AskAssistantDrawer({ open, context, risks, files, onClose }: Ask
 
   useEffect(() => {
     if (!open) return
+    let active = true
+    activeChat.current = ''
+    setChat(null)
     setMessages([])
+    setLoading(false)
     setError('')
+    if (reportId) {
+      openConversation(reportId).then((data) => {
+        if (!active) return
+        activeChat.current = data.id
+        setChat(data); setMessages(data.messages)
+      }).catch((e) => { if (active) setError(workflowError(e)) })
+    } else setError('请重新生成审查报告后再追问。')
     setInput(context?.question ?? '')
     setSelectedIds(context?.riskId ? [context.riskId] : [])
     const timer = window.setTimeout(() => inputRef.current?.focus(), 100)
@@ -49,11 +58,13 @@ export function AskAssistantDrawer({ open, context, risks, files, onClose }: Ask
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
+      active = false
+      activeChat.current = ''
       window.clearTimeout(timer)
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = previousOverflow
     }
-  }, [open, context?.riskId, context?.question])
+  }, [open, reportId, context?.riskId, context?.question])
 
   useEffect(() => {
     if (open) endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
@@ -71,31 +82,21 @@ export function AskAssistantDrawer({ open, context, risks, files, onClose }: Ask
   async function send() {
     const question = input.trim()
     if (!question || loading) return
-    if (!files.length) {
-      setError('请先在页面上传合同文件。')
+    if (!chat) {
+      setError('正在恢复对话，请稍后重试；如尚未审查，请先生成报告。')
       return
     }
     setError('')
-    const activeRisks = selectedRisks
-    const finalQuestion =
-      activeRisks.length > 1
-        ? `请结合合同原文，对比以下 ${activeRisks.length} 条风险，说明严重程度、叠加影响和修改优先级：\n${activeRisks
-            .map((risk, index) => `${index + 1}. ${risk.title}\n原文：${risk.quote}`)
-            .join('\n')}\n\n我的问题：${question}`
-        : question
-    setMessages((prev) => [
-      ...prev,
-      { role: 'user', content: question, riskTitles: activeRisks.map((risk) => risk.title) },
-    ])
     setInput('')
     setLoading(true)
     try {
-      const result = await analyzeContract(finalQuestion, files)
-      setMessages((prev) => [...prev, { role: 'assistant', content: result.answer }])
+      const result = await askReport(chat, question, selectedIds)
+      if (activeChat.current !== result.id) return
+      setChat(result); setMessages(result.messages)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '请求失败，请稍后重试。')
+      if (activeChat.current === chat.id) { setInput(question); setError(workflowError(err)) }
     } finally {
-      setLoading(false)
+      if (activeChat.current === chat.id) setLoading(false)
     }
   }
 
@@ -194,7 +195,8 @@ export function AskAssistantDrawer({ open, context, risks, files, onClose }: Ask
               }
             >
               <div className="mb-1 text-[11px] opacity-70">{message.role === 'user' ? '你' : '助手'}</div>
-              <div className="whitespace-pre-wrap break-words">{message.content}</div>
+              <div className="whitespace-pre-wrap break-words">{message.content}
+              {message.citations?.map((citation) => <details key={citation.id} className="mt-2 text-xs"><summary>来源 [{citation.id}]{citation.page ? ` · 第${citation.page}页` : ''}</summary><p>{citation.quote ?? citation.summary}</p></details>)}</div>
               {message.riskTitles && message.riskTitles.length > 1 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {message.riskTitles.map((title) => (
@@ -231,12 +233,12 @@ export function AskAssistantDrawer({ open, context, risks, files, onClose }: Ask
           />
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="text-[11px] text-muted-foreground">Ctrl / ⌘ + Enter 发送</span>
-            <Button onClick={() => void send()} disabled={loading || !input.trim() || !files.length}>
+            <Button onClick={() => void send()} disabled={loading || !input.trim() || !chat}>
               {loading ? '回答中…' : '发送'}
             </Button>
           </div>
           <p className="mt-2 text-[11px] leading-5 text-muted-foreground">
-            回答基于已上传合同，仅作风险提示，不构成正式法律意见。
+            回答结合当前报告、原文及最近8轮对话；历史记录保存在后端。仅作风险提示。
           </p>
         </footer>
       </aside>

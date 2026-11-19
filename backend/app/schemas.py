@@ -118,6 +118,8 @@ class EvidenceSearchResponse(BaseModel):
 
 
 class ClauseExtractionResponse(BaseModel):
+    task_id: str | None = None
+    task_revision: int | None = None
     documents: List[Dict[str, Any]]
     clauses: List[Dict[str, Any]]
     matches: List[Dict[str, Any]]
@@ -154,6 +156,7 @@ class VersionCompareResponse(BaseModel):
 
 
 class RentalReviewResponse(BaseModel):
+    report_id: str | None = None
     filename: str
     file_id: str | None = None
     file_type: str
