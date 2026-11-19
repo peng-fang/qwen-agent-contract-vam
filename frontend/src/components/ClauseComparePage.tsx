@@ -1,3 +1,5 @@
+import { VerificationActions } from './VerificationActions'
+import { loadVerification, workflowError, type Verification } from '@/lib/workflows'
 import { useEffect, useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -8,7 +10,6 @@ import {
   type AmountCheck,
   type ClauseMatch,
   type ClauseSide,
-  type ClauseExtractionResult,
   type VamEvidenceInput,
 } from '@/lib/api'
 import { EvidenceDrawer, type EvidenceDetail } from './EvidenceDrawer'
@@ -55,10 +56,10 @@ function AmountBlock({
               <button
                 type="button"
                 className="text-[11px] text-blue-600 underline-offset-2 hover:underline"
-                onClick={() => onResolve(item.evidence_id)}
+                disabled={item.evidence_id.startsWith('user:')} onClick={() => onResolve(item.evidence_id)}
                 title={item.quote}
               >
-                {item.evidence_id}
+                {item.evidence_id.startsWith('user:') ? '用户确认（非合同原文）' : item.evidence_id}
               </button>
             </li>
           ))}
@@ -325,7 +326,7 @@ export function ClauseComparePage({
 }) {
   const [promoFile, setPromoFile] = useState<File | null>(null)
   const [contractFile, setContractFile] = useState<File | null>(null)
-  const [result, setResult] = useState<ClauseExtractionResult | null>(null)
+  const [result, setResult] = useState<Verification | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [evidence, setEvidence] = useState<EvidenceDetail | null>(null)
@@ -368,7 +369,7 @@ export function ClauseComparePage({
 
   const counts = useMemo(() => {
     const counter = { conflict: 0, insufficient: 0, consistent: 0 }
-    result?.matches.forEach((item) => {
+    ;(result?.semantic_review?.matches ?? result?.matches)?.forEach((item) => {
       if (item.verdict_group === 'conflict') counter.conflict += 1
       else if (item.verdict_group === 'consistent') counter.consistent += 1
       else counter.insufficient += 1
@@ -386,6 +387,7 @@ export function ClauseComparePage({
     try {
       const data = await extractClauses([promoFile, contractFile], ['promo', 'contract'])
       setResult(data)
+      if (data.task_id) localStorage.setItem('last-verification', data.task_id)
     } catch (e) {
       setResult(null)
       const detail = e instanceof Error ? e.message : '请求失败'
@@ -398,9 +400,14 @@ export function ClauseComparePage({
     }
   }
 
+  async function restore() {
+    const id = localStorage.getItem('last-verification')
+    if (!id) { setError('还没有保存的核验'); return }
+    try { setResult(await loadVerification(id)); setError('') } catch (e) { setError(workflowError(e)) }
+  }
   const rows = CLAUSE_ORDER.map((clauseType) => ({
     clauseType,
-    match: result?.matches.find((item) => item.clause_type === clauseType),
+    match: (result?.semantic_review?.matches ?? result?.matches)?.find((item) => item.clause_type === clauseType),
   }))
   const fileIds = useMemo(() => new Map(
     (result?.documents ?? []).map((document) => [document.document_id, document.file_id ?? '']),
@@ -413,7 +420,7 @@ export function ClauseComparePage({
           <h1 className="text-2xl font-bold tracking-tight">宣传 vs 合同</h1>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
             上传宣传材料与合同，逐类比对退款、违约金、自动续费、服务期限、额外收费；
-            结论与金额由确定性代码判定，原文片段可回查页码。
+            先由规则生成初步结论，可再进行模型语义复核；金额由程序计算，原文片段可回查页码。
           </p>
         </CardContent>
       </Card>
@@ -427,26 +434,26 @@ export function ClauseComparePage({
             <div className="flex flex-wrap items-center gap-3">
               <Badge
                 variant={
-                  result.risk.level === 'high'
+                  (result.semantic_review?.risk ?? result.risk).level === 'high'
                     ? 'red'
-                    : result.risk.level === 'medium'
+                    : (result.semantic_review?.risk ?? result.risk).level === 'medium'
                       ? 'yellow'
                       : 'green'
                 }
               >
-                {result.risk.level_label}
+                {(result.semantic_review?.risk ?? result.risk).level_label}
               </Badge>
               <span className="text-2xl font-semibold">
-                {result.risk.score}
+                {(result.semantic_review?.risk ?? result.risk).score}
                 <span className="text-sm font-normal text-muted-foreground"> / 100</span>
               </span>
               <span className="text-xs text-muted-foreground">
                 确定性规则评分，不构成法律意见
               </span>
             </div>
-            {result.risk.redlines.length > 0 ? (
+            {(result.semantic_review?.risk ?? result.risk).redlines.length > 0 ? (
               <ul className="space-y-1.5 text-sm">
-                {result.risk.redlines.map((item) => (
+                {(result.semantic_review?.risk ?? result.risk).redlines.map((item) => (
                   <li key={`${item.clause_type}-${item.reason}`} className="flex gap-2">
                     <Badge
                       variant={
@@ -538,6 +545,7 @@ export function ClauseComparePage({
                 使用工作区文件
               </Button>
             )}
+            <Button variant="outline" onClick={() => void restore()} disabled={loading}>恢复最近一次核验</Button>
             <Button onClick={run} disabled={loading}>
               {loading ? '对照中…' : '开始对照'}
             </Button>
@@ -568,6 +576,7 @@ export function ClauseComparePage({
         </CardContent>
       </Card>
 
+      {result && <VerificationActions key={`${result.task_id}:${result.task_revision}`} task={result} onUpdate={(next) => setResult((current) => current?.task_id === next.task_id ? next : current)} onResolve={resolveById} />}
       <Card>
         <CardHeader>
           <CardTitle>五类条款逐项对照</CardTitle>

@@ -66,7 +66,8 @@ async def extract_clauses(
     # id used by evidence search and checklist.
     for document, (path, _original_name, _role) in zip(result.get('documents', []), specs):
         document['file_id'] = Path(path).name
-    return ClauseExtractionResponse(**result)
+    from app.services.verification_tasks import create
+    return ClauseExtractionResponse(**create(result))
 
 
 @router.get('/evidence/{evidence_id}', response_model=EvidenceResolveResponse)
