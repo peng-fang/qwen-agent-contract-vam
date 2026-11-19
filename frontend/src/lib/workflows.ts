@@ -13,7 +13,7 @@ export function workflowError(error: unknown) {
 export interface Conversation {
   id: string; revision: number; report_id: string
   messages: { role: 'user' | 'assistant'; content: string; riskTitles?: string[];
-    citations?: { id: string; quote?: string; summary?: string; page?: number; source_url?: string }[] }[]
+    citations?: { id: string; quote?: string; text?: string; summary?: string; page?: number; source_url?: string }[] }[]
 }
 export async function openConversation(reportId: string): Promise<Conversation> {
   const key = `report-chat:${reportId}`

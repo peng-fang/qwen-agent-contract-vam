@@ -2,6 +2,8 @@
 
 基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent) 的课程项目。
 
+新增报告连续追问、补充参数续办、付款计划与语义复核的运行方式及验收见 [四项合同工作流](docs/contract-workflows.md)。
+
 当前架构：
 
 ```text

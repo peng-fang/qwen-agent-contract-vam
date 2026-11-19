@@ -41,6 +41,10 @@ export function VerificationActions({ task, onUpdate, onResolve }: {
         </fieldset>
         <Button disabled={!!busy} type="submit">{busy === 'facts' ? '更新中…' : '确认事实并继续核验'}</Button>
       </form>
+      <div className="border-t pt-3">
+        <p className="mb-2 text-sm text-muted-foreground">模型重新阅读双方原文，复核时段、主体和例外。下方保留规则结论供比较。</p>
+        <Button disabled={!!busy} variant="outline" onClick={() => void run('review')}>{busy === 'review' ? '模型复核中…' : '模型复核当前结论'}</Button>
+      </div>
       {error && <p role="alert" className="text-sm text-red-700">{error}。原核验结果仍保留；如记录冲突，请恢复最近一次核验。</p>}
       {task.semantic_review && <div className="space-y-3" aria-live="polite">
         <p className="text-sm">当前展示复核后的结论及风险统计 · {task.semantic_review.model.model}</p>

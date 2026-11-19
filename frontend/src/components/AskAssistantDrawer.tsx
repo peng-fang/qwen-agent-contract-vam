@@ -196,7 +196,7 @@ export function AskAssistantDrawer({ open, reportId, context, risks, onClose }: 
             >
               <div className="mb-1 text-[11px] opacity-70">{message.role === 'user' ? '你' : '助手'}</div>
               <div className="whitespace-pre-wrap break-words">{message.content}
-              {message.citations?.map((citation) => <details key={citation.id} className="mt-2 text-xs"><summary>来源 [{citation.id}]{citation.page ? ` · 第${citation.page}页` : ''}</summary><p>{citation.quote ?? citation.summary}</p></details>)}</div>
+              {message.citations?.map((citation) => <details key={citation.id} className="mt-2 text-xs"><summary>来源 [{citation.id}]{citation.page ? ` · 第${citation.page}页` : ''}</summary><p>{citation.quote ?? citation.text ?? citation.summary}</p></details>)}</div>
               {message.riskTitles && message.riskTitles.length > 1 && (
                 <div className="mt-2 flex flex-wrap gap-1">
                   {message.riskTitles.map((title) => (

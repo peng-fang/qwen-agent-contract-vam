@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictInt, FiniteFloat
 
 from app.services import workflow_store as store, report_dialogue, verification_tasks
 from app.services.workflow_llm import ModelUnavailable
-from app.services import payment_plans
+from app.services import semantic_review, payment_plans
 
 router = APIRouter(prefix='/api/workflows', tags=['workflows'])
 
@@ -73,6 +73,15 @@ def get_verification(task_id: str):
 @router.post('/verifications/{task_id}/facts')
 def add_facts(task_id: str, req: Supplement):
     return execute(verification_tasks.supplement, task_id, req.facts.model_dump(exclude_none=True), req.revision)
+
+
+class ReviewRequest(BaseModel):
+    revision: int = Field(ge=1)
+
+
+@router.post('/verifications/{task_id}/review')
+def review(task_id: str, req: ReviewRequest):
+    return execute(semantic_review.review, task_id, req.revision)
 
 
 class PaymentRequest(BaseModel):

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import re
 
 from rental_review.parser import parse_contract
 from . import workflow_store as store
@@ -42,9 +43,12 @@ def ask(conversation_id: str, question: str, risk_ids: list[str], revision: int)
     valid_risks = {r['risk_id'] for r in risks}
     if any(r not in valid_risks for r in risk_ids):
         raise ValueError('所选风险不属于这份报告')
-    evidence = {c['clause_id']: c for c in snapshot['sources']}
+    evidence = {c['clause_id']: {**c, 'quote': c['text']} for c in snapshot['sources']}
+    normalized_source = re.sub(r'\s+', '', '\n'.join(c['text'] for c in snapshot['sources']))
     for risk in risks:
-        evidence[risk['risk_id']] = {'quote': risk['quote'], 'page': risk.get('page')}
+        quote = re.sub(r'\s+', '', risk['quote'])
+        if quote and quote in normalized_source:
+            evidence[risk['risk_id']] = {'quote': risk['quote'], 'page': risk.get('page')}
         for law in risk.get('legal_basis', []):
             evidence[law['article_id']] = law
     # Refuse oversized context rather than silently dropping contract conditions.
@@ -61,7 +65,8 @@ def ask(conversation_id: str, question: str, risk_ids: list[str], revision: int)
     for attempt in range(2):
         output, metadata = generate_json(SYSTEM, payload, schema, 'report_dialogue')
         valid = (output['answer'].strip() and output['citations']
-                 and all(c in evidence and f'[{c}]' in output['answer'] for c in output['citations']))
+                 and all(c in evidence and f'[{c}]' in output['answer'] for c in output['citations'])
+                 and all(c in evidence for c in re.findall(r'\[([A-Za-z0-9_-]+)\]', output['answer'])))
         if valid:
             break
         payload['validation_feedback'] = {'previous_answer': output, 'requirement':
