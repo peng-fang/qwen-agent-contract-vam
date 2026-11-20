@@ -220,7 +220,18 @@ reports/                      # 评测报告与看板（含 eval_heldout_*）
 python scripts/eval_heldout.py --dataset heldout_v2 --diagnostics --output-dir ./local-eval
 ```
 
-`eval_heldout_v2_diagnostics.json` 包含数据文件哈希、各案例的金标和预测标签、双方抽取字段、原文及位置、匹配理由。每一侧单独记录是否定位到标注句、没有抽到条款、引用位置无效、引用落在其他原文，或抽到了标注外的条款。按 `case` 和 `clause_type` 查询可复盘对应结果。定位通过只表示找到和标注句匹配的原文，不能证明匹配结论正确。
+`eval_heldout_v2_diagnostics.json` 包含数据文件哈希、各案例的金标和预测标签、双方抽取字段、原文及位置、匹配理由。按 `case` 和 `clause_type` 查询可复盘对应结果。双方各自的证据状态如下：
+
+| 状态 | 含义 |
+| --- | --- |
+| `located` | 页码和字符区间可回查，且引文与标注句匹配 |
+| `missing_clause` | 有标注，但没有抽到该类条款 |
+| `invalid_location` | 抽到条款，但所有候选引文均无法按位置回查 |
+| `different_excerpt` | 有可回查的引文，但没有一处与标注句匹配 |
+| `unexpected_clause` | 抽到该类条款，但这一侧没有对应标注 |
+| `not_annotated` | 这一侧没有对应标注，也没有抽到该类条款 |
+
+`summary.verdict_mismatches` 统计六标签不一致的条数，`summary.mismatches_with_both_evidence_located` 统计其中双方均定位到标注句的条数。定位检查只覆盖引文与标注句的匹配，判断结论是否得到引文支持仍需复盘。
 
 ## 已知限制
 

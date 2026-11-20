@@ -399,17 +399,22 @@ def main() -> None:
                                     for side in ('promo', 'contract'))
         trace_path = output_dir / f'{prefix}_diagnostics.json'
         trace_path.write_text(json.dumps({
+            'schema_version': 1,
             'dataset': args.dataset,
             'labels_sha256': hashlib.sha256(label_bytes).hexdigest(),
             'extractor': 'rules',
             'summary': {
                 'row_count': len(diagnostics),
                 'verdict_mismatches': len(mismatches),
+                'mismatches_with_both_evidence_located': sum(
+                    row['promo']['status'] == row['contract']['status'] == 'located'
+                    for row in mismatches
+                ),
                 'side_status_counts': statuses,
                 'mismatch_side_status_counts': mismatch_statuses,
             },
             'rows': diagnostics,
-        }, ensure_ascii=False, indent=2), encoding='utf-8')
+        }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
         print(f'逐案诊断：{trace_path}（{len(diagnostics)} 条核验记录，'
               f'{len(mismatches)} 条六标签不一致）')
 
