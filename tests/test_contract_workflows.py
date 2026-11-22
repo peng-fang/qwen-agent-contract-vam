@@ -115,6 +115,51 @@ def test_semantic_review_keeps_baseline_and_invalidates_on_facts(client, monkeyp
     assert updated['semantic_review'] is None
 
 
+def test_budgeted_review_only_sends_prioritized_item_and_preserves_other_rows(client, monkeypatch):
+    data = upload(client, promo='报名后可以退款。会员到期自动续费。',
+                  contract='报名后可以退款。会员到期自动续费，但取消需提前30天通知。')
+    url = f"/api/workflows/verifications/{data['task_id']}/review"
+    captured = []
+
+    def review_one(system, payload, schema, name):
+        fields = schema['properties']['items']['items']['properties']
+        assert fields['clause_type']['enum'] == payload['requested_types']
+        assert set(fields['citations']['items']['enum']) == set(payload['evidence'])
+        captured.append(payload)
+        return review_output(payload, verdict='conflict')
+
+    monkeypatch.setattr(semantic_review, 'generate_json', review_one)
+    response = client.post(url, json={'revision': data['task_revision'], 'budget': 1})
+    assert response.status_code == 200, response.text
+    updated = response.json()
+    review = updated['semantic_review']
+    assert captured[0]['requested_types'] == ['auto_renewal']
+    assert [row['clause_type'] for row in captured[0]['matches']] == ['auto_renewal']
+    assert review['selection']['eligible_count'] == 2
+    assert review['selection']['budget'] == 1
+    assert review['selection']['selected'][0]['signals']
+    assert updated['matches'] == data['matches']
+    assert next(row for row in review['matches'] if row['clause_type'] == 'refund') == data['matches'][0]
+    assert next(row['verdict'] for row in review['matches'] if row['clause_type'] == 'auto_renewal') == 'conflict'
+
+    response = client.post(url, json={'revision': updated['task_revision']})
+    assert response.status_code == 200, response.text
+    assert captured[1]['requested_types'] == ['refund', 'auto_renewal']
+
+
+def test_budgeted_review_rejects_opinion_outside_selected_items(client, monkeypatch):
+    data = upload(client, promo='报名后可以退款。会员到期自动续费。',
+                  contract='报名后可以退款。会员到期自动续费，但取消需提前30天通知。')
+    url = f"/api/workflows/verifications/{data['task_id']}/review"
+    monkeypatch.setattr(semantic_review, 'generate_json', lambda *args: ({'items': [{
+        'clause_type': 'refund', 'verdict': 'conflict', 'reason': '超出限额的意见', 'citations': ['unused'],
+    }]}, {}))
+    for budget in (0, True, 6):
+        assert client.post(url, json={'revision': 1, 'budget': budget}).status_code == 422
+    assert client.post(url, json={'revision': 1, 'budget': 1}).status_code == 502
+    assert store.get('verifications', data['task_id'])['revision'] == 1
+
+
 def test_refund_preview_does_not_change_confirmed_state_or_invalidate_review(client, monkeypatch):
     uploaded = upload(client, promo='可以申请退款，退款扣除20%手续费。',
                       contract='每节原价300元。超过12节不予退费，退费扣除20%手续费。')

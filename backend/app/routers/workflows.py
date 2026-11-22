@@ -88,11 +88,12 @@ def preview_refund(task_id: str, req: RefundPreviewRequest):
 
 class ReviewRequest(BaseModel):
     revision: int = Field(ge=1)
+    budget: StrictInt | None = Field(None, ge=1, le=5)
 
 
 @router.post('/verifications/{task_id}/review')
 def review(task_id: str, req: ReviewRequest):
-    return execute(semantic_review.review, task_id, req.revision)
+    return execute(semantic_review.review, task_id, req.revision, req.budget)
 
 
 class PaymentRequest(BaseModel):

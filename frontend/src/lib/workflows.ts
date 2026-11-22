@@ -41,6 +41,8 @@ export interface Verification extends ClauseExtractionResult {
   refund_question?: { field: RefundFact; question: string; condition: string | null; evidence_id: string | null } | null
   semantic_review?: { items: { clause_type: string; original_verdict: string; verdict: string; reason: string;
     evidence: { evidence_id: string; quote: string; page: number }[] }[];
+    selection?: { budget: number | null; eligible_count: number;
+      selected: { clause_type: string; score: number; signals: string[] }[] };
     matches: ClauseMatch[]; risk: RiskAssessment; model: { provider: string; model: string }; note: string } | null
 }
 export async function loadVerification(id: string) {
@@ -60,9 +62,9 @@ export async function previewRefund(task: Verification, assumptions: RefundPrevi
   return (await axios.post<RefundPreview>(`/api/workflows/verifications/${task.task_id}/refund-preview`,
     { revision: task.task_revision, assumptions })).data
 }
-export async function reviewVerification(task: Verification) {
+export async function reviewVerification(task: Verification, budget?: number) {
   return (await axios.post<Verification>(`/api/workflows/verifications/${task.task_id}/review`,
-    { revision: task.task_revision })).data
+    { revision: task.task_revision, budget })).data
 }
 
 export interface PaymentPlan {

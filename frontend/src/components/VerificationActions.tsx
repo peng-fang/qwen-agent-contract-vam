@@ -90,16 +90,18 @@ export function VerificationActions({ task, onUpdate, onResolve }: {
     Object.fromEntries(Object.entries(task.confirmed_facts ?? {}).map(([k, v]) => [k, String(v)])))
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
+  const [reviewBudget, setReviewBudget] = useState(2)
   const next = task.refund_question
   const nextEvidenceId = next?.evidence_id
   const currentRefund = task.matches.find((match) => match.clause_type === 'refund')?.amount
   if (!task.task_id) return null
-  async function run(action: 'facts' | 'review', field?: RefundFact) {
+  async function run(action: 'facts' | 'review' | 'budgeted-review', field?: RefundFact) {
     setBusy(action); setError('')
     try {
       const input = Object.fromEntries(Object.entries(facts).filter(([k, v]) => v !== '' && (!field || k === field)).map(([k, v]) =>
         [k, k === 'request_phase' ? v : Number(v)]))
-      onUpdate(await (action === 'facts' ? updateFacts(task, input) : reviewVerification(task)))
+      onUpdate(await (action === 'facts' ? updateFacts(task, input)
+        : reviewVerification(task, action === 'budgeted-review' ? reviewBudget : undefined)))
     } catch (e) { setError(workflowError(e)) } finally { setBusy('') }
   }
   return <Card>
@@ -138,13 +140,34 @@ export function VerificationActions({ task, onUpdate, onResolve }: {
         key={task.task_revision} task={task} current={currentRefund} disabled={!!busy} />}
       <div className="border-t pt-3">
         <p className="mb-2 text-sm text-muted-foreground">模型重新阅读双方原文，复核时段、主体和例外。下方保留规则结论供比较。</p>
-        <Button disabled={!!busy} variant="outline" onClick={() => void run('review')}>{busy === 'review' ? '模型复核中…' : '模型复核当前结论'}</Button>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="text-sm">优先复核上限
+            <select className={inputClass} disabled={!!busy} value={reviewBudget}
+              onChange={(event) => setReviewBudget(Number(event.target.value))}>
+              {[1, 2, 3, 4, 5].map((count) => <option key={count} value={count}>{count} 项</option>)}
+            </select>
+          </label>
+          <Button disabled={!!busy} onClick={() => void run('budgeted-review')}>
+            {busy === 'budgeted-review' ? '优先复核中…' : '按上限优先复核'}
+          </Button>
+          <Button disabled={!!busy} variant="outline" onClick={() => void run('review')}>
+            {busy === 'review' ? '复核中…' : '复核所有可对照条款'}
+          </Button>
+        </div>
       </div>
       {error && <p role="alert" className="text-sm text-red-700">{error}。原核验结果仍保留；如记录冲突，请恢复最近一次核验。</p>}
       {task.semantic_review && <div className="space-y-3" aria-live="polite">
-        <p className="text-sm">当前展示复核后的结论及风险统计 · {task.semantic_review.model.model}</p>
+        <p className="text-sm">
+          本次复核 {task.semantic_review.items.length}
+          {task.semantic_review.selection ? ` / ${task.semantic_review.selection.eligible_count}` : ''} 项 · {task.semantic_review.model.model}
+          {Boolean(task.semantic_review.selection?.budget) && '。未复核条款沿用规则结论。'}
+        </p>
         {task.semantic_review.items.map((item) => <div key={item.clause_type} className="rounded border p-3 text-sm">
-          <strong>{labels[item.original_verdict] ?? item.original_verdict} → {labels[item.verdict]}</strong>
+          <strong>{task.matches.find((match) => match.clause_type === item.clause_type)?.clause_label ?? item.clause_type} · {labels[item.original_verdict] ?? item.original_verdict} → {labels[item.verdict]}</strong>
+          {Boolean(task.semantic_review?.selection?.budget) && <p className="text-xs text-muted-foreground">
+            {task.semantic_review?.selection?.selected.find((selection) => selection.clause_type === item.clause_type)
+              ?.signals.join('、') || '按原顺序补足本次复核额度'}
+          </p>}
           <p className="my-2">{item.reason}</p>
           {item.evidence.map((entry) => <button key={entry.evidence_id} className="mr-3 underline" onClick={() => onResolve(entry.evidence_id)}>第{entry.page}页：{entry.quote.slice(0, 40)}</button>)}
         </div>)}
