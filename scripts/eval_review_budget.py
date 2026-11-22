@@ -90,8 +90,11 @@ def summarize(plans, opinions):
                         for row, opinion in decisions)
             regressions = sum(row['rule'] == row['gold'] and opinion['verdict'] not in (None, row['gold'])
                               for row, opinion in decisions)
+            conflict_fixes = sum(row['gold'] == 'conflict' and row['rule'] != 'conflict'
+                                 and opinion['verdict'] == 'conflict' for row, opinion in decisions)
             tokens = [opinion['input_tokens'] for _, opinion in decisions]
-            result.update(fixes=fixes, regressions=regressions, net_fixes=fixes - regressions,
+            result.update(fixes=fixes, fixed_missed_conflicts=conflict_fixes,
+                          regressions=regressions, net_fixes=fixes - regressions,
                           invalid_opinions=sum(opinion['verdict'] is None for _, opinion in decisions),
                           input_tokens=sum(tokens) if all(token is not None for token in tokens) else None)
         summary[method] = result
