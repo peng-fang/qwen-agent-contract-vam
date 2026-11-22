@@ -117,9 +117,17 @@ class EvidenceSearchResponse(BaseModel):
     matches: List[EvidenceMatch]
 
 
+class RefundQuestion(BaseModel):
+    field: str
+    question: str
+    condition: str | None = None
+    evidence_id: str | None = None
+
+
 class ClauseExtractionResponse(BaseModel):
     task_id: str | None = None
     task_revision: int | None = None
+    refund_question: RefundQuestion | None = None
     documents: List[Dict[str, Any]]
     clauses: List[Dict[str, Any]]
     matches: List[Dict[str, Any]]

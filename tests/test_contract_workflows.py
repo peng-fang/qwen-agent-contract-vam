@@ -30,6 +30,36 @@ def upload(client, promo='开课前申请可全额退款。', contract='开课�
     return response.json()
 
 
+@pytest.mark.parametrize('sessions', [8, 13])
+def test_one_refund_question_stops_or_recomputes_after_the_answer(client, sessions):
+    task = upload(client, contract='每节原价300元。超过12节不予退费，退费扣除20%手续费。')
+    question = task['refund_question']
+    assert question['field'] == 'used_sessions'
+    evidence = client.get(f"/api/contract/evidence/{question['evidence_id']}").json()
+    assert '超过12节不予退费' in evidence['quote']
+    url = f"/api/workflows/verifications/{task['task_id']}"
+    answered = client.post(f'{url}/facts', json={'revision': task['task_revision'],
+                           'facts': {'used_sessions': sessions}}).json()
+    assert answered['confirmed_facts'] == {'used_sessions': sessions}
+    assert client.get(url).json()['refund_question'] == answered['refund_question']
+    if sessions == 13:
+        assert answered['refund_question'] is None
+        assert answered['matches'][0]['amount']['status'] == 'not_applicable'
+        assert answered['matches'][0]['amount']['scenarios'] == []
+    else:
+        assert answered['refund_question']['field'] == 'total_paid'
+        finished = client.post(f'{url}/facts', json={'revision': answered['task_revision'],
+                               'facts': {'total_paid': 4800}}).json()
+        assert finished['refund_question'] is None
+        assert finished['matches'][0]['amount']['scenarios'][0]['amount'] == 1440
+
+
+def test_no_refund_question_when_only_contract_rule_can_unblock(client):
+    task = upload(client, contract='开课前可以退款，开课后退款扣除20%手续费。')
+    assert task['refund_question'] is None
+    assert task['matches'][0]['amount']['status'] == 'insufficient'
+
+
 def test_supplement_resume_provenance_and_conflict(client):
     result = upload(client, contract='学费4800元，每节300元；超过12节不予退费，退费扣除20%手续费。')
     task = result['task_id']

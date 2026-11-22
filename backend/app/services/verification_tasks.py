@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from clause_extraction import Document, DocRole, PageText, analyze_documents
 from clause_extraction.amounts import _refund_check
+from clause_extraction.refund_questions import next_refund_question
 from . import workflow_store as store
 
 
@@ -45,6 +46,9 @@ def supplement(task_id: str, facts: dict, revision: int) -> dict:
 
 
 def public(task: dict) -> dict:
+    refund = next((match.get('amount') for match in task['bundle']['matches']
+                   if match['clause_type'] == 'refund'), None)
     return {**task['bundle'], 'task_id': task['id'], 'task_revision': task['revision'],
             'confirmed_facts': task['facts'], 'fact_history': task['fact_history'],
+            'refund_question': next_refund_question(refund) if refund else None,
             'semantic_review': task.get('semantic_review')}

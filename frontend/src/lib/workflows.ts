@@ -34,8 +34,11 @@ export async function askReport(chat: Conversation, question: string, riskIds: s
     { question, risk_ids: riskIds, revision: chat.revision })).data
 }
 
+export type RefundFact = 'used_sessions' | 'total_paid' | 'unit_price' | 'request_day' | 'request_phase'
+
 export interface Verification extends ClauseExtractionResult {
   task_id?: string; task_revision?: number; confirmed_facts?: Record<string, string | number>
+  refund_question?: { field: RefundFact; question: string; condition: string | null; evidence_id: string | null } | null
   semantic_review?: { items: { clause_type: string; original_verdict: string; verdict: string; reason: string;
     evidence: { evidence_id: string; quote: string; page: number }[] }[];
     matches: ClauseMatch[]; risk: RiskAssessment; model: { provider: string; model: string }; note: string } | null

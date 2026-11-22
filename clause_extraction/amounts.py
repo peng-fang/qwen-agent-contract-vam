@@ -47,7 +47,8 @@ def _find(pattern: str, quotes: Sequence[Quote], flags: int = 0):
     return None
 
 
-def _condition(label: str, met: Optional[bool], evidence_id: str, quote: str) -> Dict[str, Any]:
+def _condition(label: str, met: Optional[bool], evidence_id: str, quote: str, *,
+               requires_fact: Optional[str] = None) -> Dict[str, Any]:
     result = {
         'condition': label,
         'met': met,
@@ -56,6 +57,8 @@ def _condition(label: str, met: Optional[bool], evidence_id: str, quote: str) ->
     }
     if evidence_id.startswith('user:'):
         result.update(source='user', fact_key=evidence_id[5:])
+    if requires_fact is not None:
+        result['requires_fact'] = requires_fact
     return result
 
 
@@ -176,6 +179,7 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
         met = None if used is None else used[0] <= max_sessions
         basis.append(_condition(
             f'已上课节数不超过 {max_sessions} 节', met, max_hit[2], max_hit[1],
+            requires_fact='used_sessions',
         ))
         evidence_ids.append(max_hit[2])
         if used is None:
@@ -184,7 +188,7 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
         day = (confirmed_facts or {}).get('request_day')
         basis.append(_condition(
             f'退款申请在 {window[0].group(1)} 日内提出', None if day is None else day <= int(window[0].group(1)),
-            window[2], window[1],
+            window[2], window[1], requires_fact='request_day',
         ))
         if day is None:
             missing.append('申请时间')
@@ -195,7 +199,8 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
         if phase_hit:
             supplied_phase = (confirmed_facts or {}).get('request_phase')
             basis.append(_condition(
-                f'{phase}提出退款', None if supplied_phase is None else supplied_phase == phase, phase_hit[1], phase_hit[0],
+                f'{phase}提出退款', None if supplied_phase is None else supplied_phase == phase,
+                phase_hit[1], phase_hit[0], requires_fact='request_phase',
             ))
             if supplied_phase is None:
                 missing.append('申请阶段')
