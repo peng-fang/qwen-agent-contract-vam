@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
-import { reviewVerification, updateFacts, workflowError, type RefundFact, type Verification } from '@/lib/workflows'
+import type { AmountCheck } from '@/lib/api'
+import { previewRefund, reviewVerification, updateFacts, workflowError,
+  type RefundFact, type RefundPreview, type Verification } from '@/lib/workflows'
 
 const fields = [['used_sessions', '已上课节数'], ['total_paid', '实付金额（元）'],
-  ['unit_price', '每节原价（元）'], ['request_day', '申请距合同约定起点的天数']] as const
+  ['unit_price', '每节原价（元）'], ['request_day', '申请距合同约定起点的天数'],
+  ['request_phase', '申请阶段']] as const
 const labels: Record<string, string> = { consistent: '一致', conflict: '矛盾', unclear: '证据不足' }
 const inputClass = 'block w-full rounded border bg-background p-2'
 
@@ -20,6 +23,66 @@ function FactInput({ field, value, onChange, required }: {
     className={inputClass} required={required} value={value} onChange={(e) => onChange(e.target.value)} />
 }
 
+function refundSummary(check: AmountCheck) {
+  const amount = check.scenarios.length === 1 ? check.scenarios[0].amount : null
+  return check.status === 'applicable' && amount !== null
+    ? `退款试算金额 ¥${amount.toFixed(2)}` : check.status_label
+}
+
+function RefundWhatIf({ task, current, disabled }: { task: Verification; current: AmountCheck; disabled: boolean }) {
+  const [field, setField] = useState<RefundFact>('used_sessions')
+  const [value, setValue] = useState('')
+  const [result, setResult] = useState<RefundPreview | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function calculate() {
+    setBusy(true)
+    setError('')
+    setResult(null)
+    try {
+      const amount = field === 'request_phase' ? value : Number(value)
+      setResult(await previewRefund(task, { [field]: amount }))
+    } catch (e) {
+      setError(workflowError(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return <details className="rounded-md border p-3">
+    <summary className="cursor-pointer text-sm font-medium">假设试算</summary>
+    <form className="mt-2 space-y-2" onSubmit={(event) => { event.preventDefault(); void calculate() }}>
+      <p className="text-xs text-muted-foreground">试算只用于比较。需要更新正式事实时，请用上面的更正表单。</p>
+      <fieldset disabled={busy || disabled} className="grid gap-2 sm:grid-cols-2">
+        <label className="text-sm">假设条件
+          <select className={inputClass} value={field} onChange={(event) => {
+            setField(event.target.value as RefundFact); setValue(''); setResult(null); setError('')
+          }}>
+            {fields.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+          </select>
+        </label>
+        <label className="text-sm">假设值
+          <FactInput field={field} value={value} required
+            onChange={(next) => { setValue(next); setResult(null); setError('') }} />
+        </label>
+      </fieldset>
+      <Button type="submit" size="sm" variant="outline" disabled={busy || disabled}>
+        {busy ? '试算中…' : '计算这个假设'}
+      </Button>
+      {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+      {result && <div aria-live="polite" className="rounded-md bg-muted/60 p-3 text-sm">
+        <p>按已确认事实：{refundSummary(current)}</p>
+        <p className="font-medium">按本次假设：{refundSummary(result.refund)}</p>
+        {result.refund.reason && <p className="mt-1 text-xs text-muted-foreground">{result.refund.reason}</p>}
+        {result.refund.missing.length > 0 && <p className="mt-1 text-xs text-muted-foreground">
+          还需确认：{result.refund.missing.join('、')}
+        </p>}
+      </div>}
+    </form>
+  </details>
+}
+
 export function VerificationActions({ task, onUpdate, onResolve }: {
   task: Verification; onUpdate: (v: Verification) => void; onResolve: (id: string) => void
 }) {
@@ -29,6 +92,7 @@ export function VerificationActions({ task, onUpdate, onResolve }: {
   const [error, setError] = useState('')
   const next = task.refund_question
   const nextEvidenceId = next?.evidence_id
+  const currentRefund = task.matches.find((match) => match.clause_type === 'refund')?.amount
   if (!task.task_id) return null
   async function run(action: 'facts' | 'review', field?: RefundFact) {
     setBusy(action); setError('')
@@ -66,12 +130,12 @@ export function VerificationActions({ task, onUpdate, onResolve }: {
             <FactInput field={key} value={facts[key] ?? ''}
               onChange={(value) => setFacts({ ...facts, [key]: value })} />
           </label>)}
-          <label className="text-sm">申请阶段<FactInput field="request_phase" value={facts.request_phase ?? ''}
-            onChange={(value) => setFacts({ ...facts, request_phase: value })} /></label>
         </fieldset>
         <Button disabled={!!busy} type="submit">{busy === 'facts' ? '更新中…' : '确认事实并继续核验'}</Button>
         </form>
       </details>
+      {currentRefund && currentRefund.status !== 'no_amount' && <RefundWhatIf
+        key={task.task_revision} task={task} current={currentRefund} disabled={!!busy} />}
       <div className="border-t pt-3">
         <p className="mb-2 text-sm text-muted-foreground">模型重新阅读双方原文，复核时段、主体和例外。下方保留规则结论供比较。</p>
         <Button disabled={!!busy} variant="outline" onClick={() => void run('review')}>{busy === 'review' ? '模型复核中…' : '模型复核当前结论'}</Button>

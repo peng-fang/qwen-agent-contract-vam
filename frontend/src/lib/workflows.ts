@@ -1,5 +1,5 @@
 import axios from 'axios'
-import type { ClauseExtractionResult, ClauseMatch, RiskAssessment } from './api'
+import type { AmountCheck, ClauseExtractionResult, ClauseMatch, RiskAssessment } from './api'
 
 export function workflowError(error: unknown) {
   if (axios.isAxiosError(error)) {
@@ -49,6 +49,16 @@ export async function loadVerification(id: string) {
 export async function updateFacts(task: Verification, facts: Record<string, string | number>) {
   return (await axios.post<Verification>(`/api/workflows/verifications/${task.task_id}/facts`,
     { revision: task.task_revision, facts })).data
+}
+export interface RefundPreview {
+  task_id: string
+  based_on_revision: number
+  assumptions: Partial<Record<RefundFact, string | number>>
+  refund: AmountCheck
+}
+export async function previewRefund(task: Verification, assumptions: RefundPreview['assumptions']) {
+  return (await axios.post<RefundPreview>(`/api/workflows/verifications/${task.task_id}/refund-preview`,
+    { revision: task.task_revision, assumptions })).data
 }
 export async function reviewVerification(task: Verification) {
   return (await axios.post<Verification>(`/api/workflows/verifications/${task.task_id}/review`,

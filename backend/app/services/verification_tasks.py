@@ -45,6 +45,23 @@ def supplement(task_id: str, facts: dict, revision: int) -> dict:
     return public(task)
 
 
+def preview_refund(task_id: str, assumptions: dict, revision: int) -> dict:
+    if not assumptions:
+        raise ValueError('请填写至少一个试算条件')
+    task = store.get('verifications', task_id)
+    if task['revision'] != revision:
+        raise store.RevisionConflict('核验已更新，请重新加载')
+    docs = documents(task)
+    bundle = analyze_documents(docs)
+    match = next(item for item in bundle.matches if item.clause_type.value == 'refund')
+    return {
+        'task_id': task_id,
+        'based_on_revision': revision,
+        'assumptions': assumptions,
+        'refund': _refund_check(match, bundle.clauses, docs, task['facts'], assumptions=assumptions),
+    }
+
+
 def public(task: dict) -> dict:
     refund = next((match.get('amount') for match in task['bundle']['matches']
                    if match['clause_type'] == 'refund'), None)

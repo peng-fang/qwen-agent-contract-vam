@@ -115,6 +115,61 @@ def test_semantic_review_keeps_baseline_and_invalidates_on_facts(client, monkeyp
     assert updated['semantic_review'] is None
 
 
+def test_refund_preview_does_not_change_confirmed_state_or_invalidate_review(client, monkeypatch):
+    uploaded = upload(client, promo='可以申请退款，退款扣除20%手续费。',
+                      contract='每节原价300元。超过12节不予退费，退费扣除20%手续费。')
+    task_id = uploaded['task_id']
+    url = f'/api/workflows/verifications/{task_id}'
+    confirmed = client.post(f'{url}/facts', json={'revision': uploaded['task_revision'],
+                            'facts': {'used_sessions': 8, 'total_paid': 4800}}).json()
+    monkeypatch.setattr(semantic_review, 'generate_json', lambda system, payload, *args: review_output(payload))
+    before = client.post(f'{url}/review', json={'revision': confirmed['task_revision']}).json()
+    assert before['semantic_review'] is not None
+    assert before['matches'][0]['amount']['scenarios'][0]['amount'] == 1440
+    record = store.ROOT / 'verifications' / f'{task_id}.json'
+    snapshot = record.read_bytes()
+    revision = before['task_revision']
+
+    response = client.post(f'{url}/refund-preview', json={'revision': revision,
+                           'assumptions': {'used_sessions': 13}})
+    assert response.status_code == 200, response.text
+    preview = response.json()
+    assert preview['based_on_revision'] == revision
+    assert preview['refund']['status'] == 'not_applicable'
+    assert preview['refund']['scenarios'] == []
+    assert any(item['evidence_id'] == 'assumption:used_sessions' and item['source'] == 'assumption'
+               for item in preview['refund']['basis'])
+    assert record.read_bytes() == snapshot
+    assert client.get(url).json() == before
+
+    response = client.post(f'{url}/facts', json={'revision': revision, 'facts': {'used_sessions': 13}})
+    assert response.status_code == 200, response.text
+    after = response.json()
+    assert after['confirmed_facts'] == {'used_sessions': 13, 'total_paid': 4800.0}
+    assert after['semantic_review'] is None
+    assert after['task_revision'] == revision + 1
+    assert after['matches'][0]['amount']['status'] == 'not_applicable'
+    assert client.post(f'{url}/refund-preview', json={'revision': revision,
+                       'assumptions': {'used_sessions': 12}}).status_code == 409
+
+
+def test_refund_preview_uses_only_this_request_and_accepts_zero(client):
+    uploaded = upload(client, contract='每节原价300元。超过12节不予退费，退费扣除20%手续费。')
+    url = f"/api/workflows/verifications/{uploaded['task_id']}"
+    confirmed = client.post(f'{url}/facts', json={'revision': uploaded['task_revision'],
+                            'facts': {'used_sessions': 8, 'total_paid': 4800}}).json()
+    revision = confirmed['task_revision']
+    for assumptions, amount in (({'used_sessions': 0, 'total_paid': 6000}, 4800),
+                                ({'total_paid': 6000}, 2400)):
+        result = client.post(f'{url}/refund-preview', json={'revision': revision, 'assumptions': assumptions})
+        assert result.status_code == 200, result.text
+        assert result.json()['refund']['scenarios'][0]['amount'] == amount
+    for assumptions in ({}, {'used_sessions': -1}, {'made_up_field': 1}):
+        assert client.post(f'{url}/refund-preview', json={'revision': revision,
+                           'assumptions': assumptions}).status_code == 422
+    assert client.get(url).json()['confirmed_facts'] == {'used_sessions': 8, 'total_paid': 4800.0}
+
+
 def test_bad_semantic_citation_does_not_mutate_record(client, monkeypatch):
     data = upload(client)
     monkeypatch.setattr(semantic_review, 'generate_json', lambda *args: ({'items': [{

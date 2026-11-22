@@ -48,6 +48,11 @@ class Supplement(BaseModel):
     facts: Facts
 
 
+class RefundPreviewRequest(BaseModel):
+    revision: int = Field(ge=1)
+    assumptions: Facts
+
+
 @router.post('/conversations')
 def create_chat(req: ChatStart):
     return execute(report_dialogue.conversation, req.report_id)
@@ -73,6 +78,12 @@ def get_verification(task_id: str):
 @router.post('/verifications/{task_id}/facts')
 def add_facts(task_id: str, req: Supplement):
     return execute(verification_tasks.supplement, task_id, req.facts.model_dump(exclude_none=True), req.revision)
+
+
+@router.post('/verifications/{task_id}/refund-preview')
+def preview_refund(task_id: str, req: RefundPreviewRequest):
+    return execute(verification_tasks.preview_refund, task_id,
+                   req.assumptions.model_dump(exclude_none=True), req.revision)
 
 
 class ReviewRequest(BaseModel):
