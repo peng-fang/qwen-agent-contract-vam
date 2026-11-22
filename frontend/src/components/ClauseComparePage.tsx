@@ -621,9 +621,11 @@ export function ClauseComparePage({
       </Card>
 
       <EvidenceDrawer
+        key={evidence?.evidenceId ?? 'no-evidence'}
         open={Boolean(evidence)}
         evidence={evidence}
-        file={evidenceFile}
+        file={evidenceFile && /\.pdf$/i.test(evidenceFile.name) ? evidenceFile : null}
+        showRelated
         onClose={() => {
           setEvidence(null)
           setEvidenceFile(null)

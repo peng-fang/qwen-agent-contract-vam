@@ -15,10 +15,11 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
-from .schema import Document, PageText
+from .evidence_links import select_related_evidence
+from .schema import DocRole, Document, EvidenceSpan, PageText
 
 _EVIDENCE_ID_RE = re.compile(
-    r'^ev-(?P<doc>.+)-p(?P<page>\d+)-c(?P<start>\d+)-(?P<end>\d+)$'
+    r'^ev-(?P<doc>[\w-]+)-p(?P<page>\d+)-c(?P<start>\d+)-(?P<end>\d+)$'
 )
 
 
@@ -68,7 +69,8 @@ def _load_registered(document_id: str, registry_dir: Optional[str] = None) -> Di
         raise EvidenceNotFound(f'证据注册表损坏：{document_id}') from exc
 
 
-def resolve_evidence(evidence_id: str, registry_dir: Optional[str] = None) -> Dict[str, Any]:
+def resolve_evidence(evidence_id: str, registry_dir: Optional[str] = None, *,
+                     include_related: bool = False) -> Dict[str, Any]:
     """按 evidence_id 反查原文，返回页码、字符区间、quote 与上下文。"""
     match = _EVIDENCE_ID_RE.match((evidence_id or '').strip())
     if not match:
@@ -95,7 +97,7 @@ def resolve_evidence(evidence_id: str, registry_dir: Optional[str] = None) -> Di
 
     context_start = max(0, char_start - 60)
     context_end = min(len(page_text), char_end + 60)
-    return {
+    result = {
         'evidence_id': evidence_id,
         'document_id': document_id,
         'filename': record.get('filename', ''),
@@ -107,3 +109,11 @@ def resolve_evidence(evidence_id: str, registry_dir: Optional[str] = None) -> Di
         'context': page_text[context_start:context_end],
         'verified': True,
     }
+    if include_related:
+        role = DocRole(record.get('role', 'unknown'))
+        document = Document(document_id, result['filename'], role,
+                            [PageText(page=p['page'], text=p['text']) for p in pages])
+        anchor = EvidenceSpan(document_id, document.filename, role, page_number,
+                              f'p{page_number}', char_start, char_end, quote)
+        result['related_evidence'] = select_related_evidence(document, anchor)
+    return result

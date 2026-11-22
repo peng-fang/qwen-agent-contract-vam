@@ -137,6 +137,22 @@ class ClauseExtractionResponse(BaseModel):
     risk: Dict[str, Any]
 
 
+class RelatedEvidenceExcerpt(BaseModel):
+    evidence_id: str
+    filename: str
+    page: int
+    char_start: int
+    char_end: int
+    quote: str
+    relation: str
+
+
+class RelatedEvidence(BaseModel):
+    related: List[RelatedEvidenceExcerpt]
+    extra_quote_chars: int
+    omitted: int
+
+
 class EvidenceResolveResponse(BaseModel):
     evidence_id: str
     document_id: str
@@ -148,6 +164,7 @@ class EvidenceResolveResponse(BaseModel):
     quote: str
     context: str
     verified: bool
+    related_evidence: RelatedEvidence | None = None
 
 
 class VersionDiffDocument(BaseModel):

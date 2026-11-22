@@ -70,11 +70,12 @@ async def extract_clauses(
     return ClauseExtractionResponse(**create(result))
 
 
-@router.get('/evidence/{evidence_id}', response_model=EvidenceResolveResponse)
-async def resolve_evidence(evidence_id: str) -> EvidenceResolveResponse:
+@router.get('/evidence/{evidence_id}', response_model=EvidenceResolveResponse,
+            response_model_exclude_none=True)
+async def resolve_evidence(evidence_id: str, include_related: bool = False) -> EvidenceResolveResponse:
     """按 evidence_id 反查原文；ID 不合法、文档未注册或区间越界都返回 404。"""
     try:
-        data = await run_in_threadpool(clause_service.resolve_evidence, evidence_id)
+        data = await run_in_threadpool(clause_service.resolve_evidence, evidence_id, include_related)
     except EvidenceNotFound as exc:
         detail = exc.args[0] if exc.args else str(exc)
         raise HTTPException(status_code=404, detail=detail) from exc
