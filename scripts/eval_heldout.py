@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import html
 import json
 import sys
+from collections import Counter
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -332,16 +334,22 @@ def main() -> None:
                         help='eval_data 下的数据集目录，例如 heldout 或 heldout_v2')
     parser.add_argument('--prefix', default=None,
                         help='报告文件名前缀，默认 eval_<dataset>')
+    parser.add_argument('--output-dir', type=Path, default=REPORTS,
+                        help='输出目录，默认 reports')
+    parser.add_argument('--diagnostics', action='store_true',
+                        help='另存逐案诊断 JSON，包含双方证据、字段及匹配理由')
     args = parser.parse_args()
 
     data_dir = ROOT / 'eval_data' / args.dataset
     prefix = args.prefix or ('eval_heldout' if args.dataset == 'heldout'
                              else f'eval_{args.dataset}')
-    labels = json.loads((data_dir / 'labels.json').read_text(encoding='utf-8'))
+    label_bytes = (data_dir / 'labels.json').read_bytes()
+    labels = json.loads(label_bytes.decode('utf-8'))
     cases: List[Dict[str, Any]] = labels['cases']
     categories = list(labels['splits'])
 
-    overall = evaluate(cases)
+    diagnostics = [] if args.diagnostics else None
+    overall = evaluate(cases, diagnostics=diagnostics)
     by_category = {name: evaluate(cases, name) for name in categories}
     tuning_path = REPORTS / 'eval_metrics.json'
     tuning = json.loads(tuning_path.read_text(encoding='utf-8')) if tuning_path.exists() else None
@@ -349,7 +357,8 @@ def main() -> None:
     legacy = (json.loads(legacy_path.read_text(encoding='utf-8'))
               if prefix != 'eval_heldout' and legacy_path.exists() else None)
 
-    REPORTS.mkdir(parents=True, exist_ok=True)
+    output_dir = args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
     metrics = {
         'generated_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         'environment': {
@@ -370,18 +379,44 @@ def main() -> None:
         'by_category': by_category,
         'rule_changes_after_holdout': [],
     }
-    (REPORTS / f'{prefix}_metrics.json').write_text(
+    (output_dir / f'{prefix}_metrics.json').write_text(
         json.dumps(metrics, ensure_ascii=False, indent=2), encoding='utf-8',
     )
-    (REPORTS / f'{prefix}_report.md').write_text(
+    (output_dir / f'{prefix}_report.md').write_text(
         render_markdown(labels, overall, by_category, tuning,
                         legacy=legacy, dataset_key=args.dataset),
         encoding='utf-8',
     )
-    (REPORTS / f'{prefix}_dashboard.html').write_text(
+    (output_dir / f'{prefix}_dashboard.html').write_text(
         render_dashboard(labels, overall, by_category, dataset_key=args.dataset),
         encoding='utf-8',
     )
+    if diagnostics is not None:
+        mismatches = [row for row in diagnostics if row['gold'] != row['predicted']]
+        statuses = Counter(row[side]['status'] for row in diagnostics
+                           for side in ('promo', 'contract'))
+        mismatch_statuses = Counter(row[side]['status'] for row in mismatches
+                                    for side in ('promo', 'contract'))
+        trace_path = output_dir / f'{prefix}_diagnostics.json'
+        trace_path.write_text(json.dumps({
+            'schema_version': 1,
+            'dataset': args.dataset,
+            'labels_sha256': hashlib.sha256(label_bytes).hexdigest(),
+            'extractor': 'rules',
+            'summary': {
+                'row_count': len(diagnostics),
+                'verdict_mismatches': len(mismatches),
+                'mismatches_with_both_evidence_located': sum(
+                    row['promo']['status'] == row['contract']['status'] == 'located'
+                    for row in mismatches
+                ),
+                'side_status_counts': statuses,
+                'mismatch_side_status_counts': mismatch_statuses,
+            },
+            'rows': diagnostics,
+        }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        print(f'逐案诊断：{trace_path}（{len(diagnostics)} 条核验记录，'
+              f'{len(mismatches)} 条六标签不一致）')
 
     title = ('第二批独立留出集' if args.dataset != 'heldout' else '独立留出集')
     print(f'==== {title}基线（规则路径，未调用模型） ====')

@@ -33,6 +33,7 @@ from clause_extraction import (  # noqa: E402
     analyze_documents,
     analyze_files,
 )
+from clause_extraction.schema import Clause  # noqa: E402
 
 DATA = ROOT / 'eval_data'
 REPORTS = ROOT / 'reports'
@@ -102,6 +103,28 @@ def _quote_matches(quote: str, gold_sentence: str) -> bool:
     return left in right or right in left
 
 
+def _evidence_status(candidates: List[Clause], document: Document,
+                     gold_sentence: Optional[str]) -> str:
+    if gold_sentence is None:
+        return 'unexpected_clause' if candidates else 'not_annotated'
+    if not candidates:
+        return 'missing_clause'
+
+    # The eval fixtures use single-page text and annotate a reference sentence.
+    page_text = next((page.text for page in document.pages if page.page == 1), '')
+    has_valid_location = False
+    for clause in candidates:
+        evidence = clause.evidence
+        if evidence.page != 1 or not 0 <= evidence.char_start < evidence.char_end <= len(page_text):
+            continue
+        if page_text[evidence.char_start:evidence.char_end] != evidence.quote:
+            continue
+        has_valid_location = True
+        if _quote_matches(evidence.quote, gold_sentence):
+            return 'located'
+    return 'different_excerpt' if has_valid_location else 'invalid_location'
+
+
 def _bundle(case: Dict[str, Any]):
     """支持两种数据形式：文件对（调参集）或内联文本（冻结留出集）。"""
     if 'promo_text' in case and 'contract_text' in case:
@@ -126,7 +149,8 @@ def _bundle(case: Dict[str, Any]):
     ])
 
 
-def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None) -> Dict[str, Any]:
+def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None, *,
+             diagnostics: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     selected = [case for case in cases if split is None or case.get('split') == split]
 
     extraction_counts = {
@@ -143,17 +167,19 @@ def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None) -> Dict[s
     for case in selected:
         bundle = _bundle(case)
         documents = {document.role: document for document in bundle.documents}
+        sides = {key: {} for key in ('promo', 'contract')}
 
         for role_key, role in (('promo', DocRole.PROMO), ('contract', DocRole.CONTRACT)):
             document = documents[role]
-            gold_types = set(case['gold_clauses'].get(role_key, {}))
-            predicted_types = {
-                clause.clause_type.value for clause in bundle.clauses
-                if clause.evidence.document_id == document.document_id
-            }
+            gold_clauses = case['gold_clauses'].get(role_key, {})
+            by_type = {clause_type: [] for clause_type in CLAUSE_TYPES}
+            for clause in bundle.clauses:
+                if clause.evidence.document_id == document.document_id:
+                    by_type[clause.clause_type.value].append(clause)
             for clause_type in CLAUSE_TYPES:
-                gold = clause_type in gold_types
-                predicted = clause_type in predicted_types
+                candidates = by_type[clause_type]
+                gold = clause_type in gold_clauses
+                predicted = bool(candidates)
                 if gold and predicted:
                     extraction_counts[clause_type]['tp'] += 1
                 elif gold:
@@ -161,32 +187,41 @@ def evaluate(cases: List[Dict[str, Any]], split: Optional[str] = None) -> Dict[s
                 elif predicted:
                     extraction_counts[clause_type]['fp'] += 1
 
-            for clause_type, gold_sentence in case['gold_clauses'].get(role_key, {}).items():
-                evidence_counts[clause_type]['total'] += 1
-                candidates = [
-                    clause for clause in bundle.clauses
-                    if clause.evidence.document_id == document.document_id
-                    and clause.clause_type.value == clause_type
-                ]
-                page_text = next(
-                    (page.text for page in document.pages if page.page == 1), ''
-                )
-                for clause in candidates:
-                    evidence = clause.evidence
-                    if evidence.page != 1:
-                        continue
-                    if page_text[evidence.char_start:evidence.char_end] != evidence.quote:
-                        continue
-                    if _quote_matches(evidence.quote, gold_sentence):
-                        evidence_counts[clause_type]['correct'] += 1
-                        break
+                gold_sentence = gold_clauses.get(clause_type)
+                status = _evidence_status(candidates, document, gold_sentence)
+                if gold:
+                    evidence_counts[clause_type]['total'] += 1
+                    evidence_counts[clause_type]['correct'] += int(status == 'located')
+                if diagnostics is not None:
+                    sides[role_key][clause_type] = {
+                        'status': status,
+                        'gold_sentence': gold_sentence,
+                        'candidates': [clause.to_dict() for clause in candidates],
+                    }
 
-        predicted = {match.clause_type.value: match.verdict.value for match in bundle.matches}
+        matches = {match.clause_type.value: match for match in bundle.matches}
         match_errors_case = []
         for clause_type, gold_verdict in case['expected_verdicts'].items():
-            predicted_verdict = predicted.get(clause_type, 'missing_both')
+            match = matches.get(clause_type)
+            predicted_verdict = match.verdict.value if match is not None else 'missing_both'
             gold_verdicts.append(gold_verdict)
             predicted_verdicts.append(predicted_verdict)
+            if diagnostics is not None:
+                promo = sides['promo'][clause_type]
+                contract = sides['contract'][clause_type]
+                diagnostics.append({
+                    'case': case['id'],
+                    'split': case['split'],
+                    'clause_type': clause_type,
+                    'gold': gold_verdict,
+                    'predicted': predicted_verdict,
+                    'gold_group': GROUP_OF[gold_verdict],
+                    'predicted_group': GROUP_OF[predicted_verdict],
+                    'promo': promo,
+                    'contract': contract,
+                    'reasons': list(match.reasons) if match is not None else [],
+                    'compared': match.compared if match is not None else {},
+                })
             if gold_verdict != predicted_verdict:
                 match_errors_case.append({
                     'clause_type': clause_type,

@@ -230,6 +230,25 @@ python scripts/eval_linked_evidence.py --live --out ./local-eval/linked-evidence
 
 脚本固定主句，对比全文、附近片段、成组证据和仅主句。默认给附近片段与成组证据同样的 48 个额外引文字符，并单独记录模型服务实际报告的 token。三类各一对开发样例用于检查机制，尚未用于独立测试。
 
+复盘某一条核验结果时，可以把逐案记录和本次报告输出到单独目录：
+
+```powershell
+python scripts/eval_heldout.py --dataset heldout_v2 --diagnostics --output-dir ./local-eval
+```
+
+`eval_heldout_v2_diagnostics.json` 包含数据文件哈希、各案例的金标和预测标签、双方抽取字段、原文及位置、匹配理由。按 `case` 和 `clause_type` 查询可复盘对应结果。双方各自的证据状态如下：
+
+| 状态 | 含义 |
+| --- | --- |
+| `located` | 页码和字符区间可回查，且引文与标注句匹配 |
+| `missing_clause` | 有标注，但没有抽到该类条款 |
+| `invalid_location` | 抽到条款，但所有候选引文均无法按位置回查 |
+| `different_excerpt` | 有可回查的引文，但没有一处与标注句匹配 |
+| `unexpected_clause` | 抽到该类条款，但这一侧没有对应标注 |
+| `not_annotated` | 这一侧没有对应标注，也没有抽到该类条款 |
+
+`summary.verdict_mismatches` 统计六标签不一致的条数，`summary.mismatches_with_both_evidence_located` 统计其中双方均定位到标注句的条数。定位检查只覆盖引文与标注句的匹配，判断结论是否得到引文支持仍需复盘。
+
 ## 已知限制
 
 1. 规则抽取覆盖常见中文、英文与中英混写合同句式；第二批留出集上匹配 F1 0.860，跨句指代（0.778）和嵌套条件（0.667）仍是短板，`前述费用`、`该期限` 与「除非…否则…」的极性会漏判或读反。模型抽取是可选增强，未配置模型时只用规则。
