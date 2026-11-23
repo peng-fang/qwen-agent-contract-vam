@@ -29,6 +29,8 @@ limitations under the License.
 >
 > 默认地址：<http://localhost:5173>（开发）或 <http://127.0.0.1:8001>（生产构建）。
 >
+> 协作任务：[Markdown 任务清单](docs/PROJECT_TASKS.md) · [实验计划](research/evidence-budget/NEXT_STEPS.md)（历史规划，具体完成情况以代码与验收记录为准）。
+>
 > ---
 >
 > 以下为 Qwen-Agent 原始 README。
