@@ -2,6 +2,8 @@
 
 基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent) 的课程项目。
 
+新增报告连续追问、补充参数续办、付款计划与语义复核的运行方式及验收见 [四项合同工作流](docs/contract-workflows.md)。
+
 当前架构：
 
 ```text
@@ -213,6 +215,20 @@ reports/                      # 评测报告与看板（含 eval_heldout_*）
 - 报告：`reports/eval_heldout_v2_report.md`；看板：`reports/eval_heldout_v2_dashboard.html`
 
 **两批对比**：调参集 1.000 / 旧 v1 扩展前 0.346 / 旧 v1 扩展后 0.637（已污染）/ 新 v2 0.860。v2 仍低于调参集，说明规则对固定表达的拟合仍强于真实改写；跨句指代与嵌套条件最弱。
+
+### 复查与主证据相关的条款
+
+在「宣传 vs 合同」点击「查看原文」，证据抽屉会显示可识别的相邻限定句及明确引用的编号条款。PDF 补充片段可跳到对应页，原文位置也可由证据 ID 回查。同号条款有多处时不猜测。当前只识别同页紧接的限定句和同文档内的一跳条号引用，核验结果仍按原有流程生成。
+
+使用虚构材料复跑取证与本地模型对照：
+
+```powershell
+python scripts/eval_linked_evidence.py --out ./local-eval/linked-evidence.json
+# 本机已有 Ollama 和 qwen2.5:7b 时，增加 --live 测试模型结论。
+python scripts/eval_linked_evidence.py --live --out ./local-eval/linked-evidence-ollama.json
+```
+
+脚本固定主句，对比全文、附近片段、成组证据和仅主句。默认给附近片段与成组证据同样的 48 个额外引文字符，并单独记录模型服务实际报告的 token。三类各一对开发样例用于检查机制，尚未用于独立测试。
 
 ## 已知限制
 

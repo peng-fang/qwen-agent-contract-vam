@@ -47,13 +47,20 @@ def _find(pattern: str, quotes: Sequence[Quote], flags: int = 0):
     return None
 
 
-def _condition(label: str, met: Optional[bool], evidence_id: str, quote: str) -> Dict[str, Any]:
-    return {
+def _condition(label: str, met: Optional[bool], evidence_id: str, quote: str, *,
+               requires_fact: Optional[str] = None) -> Dict[str, Any]:
+    result = {
         'condition': label,
         'met': met,
         'evidence_id': evidence_id,
         'quote': quote,
     }
+    source, _, key = evidence_id.partition(':')
+    if source in {'user', 'assumption'} and key:
+        result.update(source=source, fact_key=key)
+    if requires_fact is not None:
+        result['requires_fact'] = requires_fact
+    return result
 
 
 def _contract_segments(documents: Sequence[Document]) -> List[Quote]:
@@ -120,7 +127,8 @@ def _scenario(label: str, condition: str, amount: Optional[float], formula: str,
 
 
 def _refund_check(match: MatchResult, clauses: Sequence[Clause],
-                  documents: Sequence[Document]) -> Dict[str, Any]:
+                  documents: Sequence[Document], confirmed_facts: Optional[Dict[str, Any]] = None,
+                  *, assumptions: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     refund = next(
         (c for c in clauses
          if c.evidence.role == DocRole.CONTRACT and c.clause_type == ClauseType.REFUND),
@@ -135,6 +143,25 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
     paid = _paid_amount(quotes)
     unit = _unit_price(quotes)
     used = _used_count(quotes)
+    values = ({**(confirmed_facts or {}), **assumptions} if assumptions else confirmed_facts)
+
+    def fact_id(key):
+        return f'assumption:{key}' if assumptions and key in assumptions else f'user:{key}'
+
+    def fact_label(key):
+        return '假设' if assumptions and key in assumptions else '用户确认'
+
+    if values is not None:
+        def fact_number(key):
+            value = str(values[key])
+            return re.match(r'(.+)', value), f'{fact_label(key)}：{value}', fact_id(key)
+        if 'used_sessions' in values:
+            count = values['used_sessions']
+            used = (count, fact_id('used_sessions'), f'{fact_label("used_sessions")}已上课 {count} 节')
+        if 'total_paid' in values:
+            paid = fact_number('total_paid')
+        if 'unit_price' in values:
+            unit = fact_number('unit_price')
     max_hit = _find(r'超过\s*([0-9]+)\s*节', quotes)
     max_sessions = int(max_hit[0].group(1)) if max_hit else None
     if max_sessions is None:
@@ -147,28 +174,50 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
     basis: List[Dict[str, Any]] = []
     missing: List[str] = []
     evidence_ids = [refund.evidence.evidence_id]
+    if values is not None and any('开课前' in q for q, _ in quotes) and any('开课后' in q for q, _ in quotes):
+        return {'status': 'insufficient', 'status_label': STATUS_LABELS['insufficient'],
+                'reason': '合同含多个申请阶段，需分别确认适用收费规则后测算',
+                'basis': [], 'scenarios': [], 'missing': ['按申请阶段确认适用收费规则'],
+                'method': 'deterministic_rules'}
+    if values is not None:
+        if unit is not None and used is None:
+            missing.append('已上课节数')
+        if used is not None and used[0] > 0 and unit is None:
+            missing.append('每节原价')
 
     if max_sessions is not None and max_hit:
         met = None if used is None else used[0] <= max_sessions
         basis.append(_condition(
             f'已上课节数不超过 {max_sessions} 节', met, max_hit[2], max_hit[1],
+            requires_fact='used_sessions',
         ))
         evidence_ids.append(max_hit[2])
         if used is None:
             missing.append('已上课节数')
     if window:
+        day = (values or {}).get('request_day')
         basis.append(_condition(
-            f'退款申请在 {window[0].group(1)} 日内提出', None,
-            window[2], window[1],
+            f'退款申请在 {window[0].group(1)} 日内提出', None if day is None else day <= int(window[0].group(1)),
+            window[2], window[1], requires_fact='request_day',
         ))
-        missing.append('申请时间')
+        if day is None:
+            missing.append('申请时间')
+        else:
+            basis.append(_condition(f'{fact_label("request_day")}申请距约定起点 {day} 天',
+                                    True, fact_id('request_day'), str(day)))
     if phase:
         phase_hit = next((item for item in quotes if phase in item[0]), None)
         if phase_hit:
+            supplied_phase = (values or {}).get('request_phase')
             basis.append(_condition(
-                f'{phase}提出退款', None, phase_hit[1], phase_hit[0],
+                f'{phase}提出退款', None if supplied_phase is None else supplied_phase == phase,
+                phase_hit[1], phase_hit[0], requires_fact='request_phase',
             ))
-            missing.append('申请阶段')
+            if supplied_phase is None:
+                missing.append('申请阶段')
+            else:
+                basis.append(_condition(f'{fact_label("request_phase")}申请阶段：{supplied_phase}',
+                                        True, fact_id('request_phase'), supplied_phase))
     if rate is None:
         missing.append('手续费比例')
     else:
@@ -193,6 +242,12 @@ def _refund_check(match: MatchResult, clauses: Sequence[Clause],
             f'每节原价 {_num(unit[0].group(1)):.2f} 元', True, unit[2], unit[1],
         ))
         evidence_ids.append(unit[2])
+
+    if values is not None and any(item['met'] is False for item in basis):
+        return {'status': 'not_applicable', 'status_label': STATUS_LABELS['not_applicable'],
+                'reason': ('试算条件未满足所列合同条件' if assumptions else '用户补充事实未满足所列合同条件'),
+                'basis': basis,
+                'scenarios': [], 'missing': [], 'method': 'deterministic_rules'}
 
     # 明确超上限：不给金额
     if max_sessions is not None and used is not None and used[0] > max_sessions:

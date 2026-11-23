@@ -30,6 +30,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.routers import clauses, contract, evidence, vam
 from app.routers import checklist
+from app.routers import workflows
 from app.schemas import HealthResponse
 
 app = FastAPI(title='签之前 API', version='0.1.0')
@@ -38,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 def _ensure_ollama() -> None:
     """Start a local Ollama server if the desktop/service process is absent."""
-    if os.getenv('AUTO_START_OLLAMA', '1').strip().lower() in {'0', 'false', 'no'}:
+    if os.getenv('REVIEW_MODEL_PROVIDER', '').lower() == 'openai' or os.getenv('AUTO_START_OLLAMA', '1').strip().lower() in {'0', 'false', 'no'}:
         return
     raw = os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434/v1').rstrip('/')
     parsed = urlsplit(raw)
@@ -81,7 +82,7 @@ def _ensure_ollama() -> None:
 
 
 def _warm_ollama_models() -> None:
-    if os.getenv('MODEL_PRELOAD', '1').strip().lower() in {'0', 'false', 'no'}:
+    if os.getenv('REVIEW_MODEL_PROVIDER', '').lower() == 'openai' or os.getenv('MODEL_PRELOAD', '1').strip().lower() in {'0', 'false', 'no'}:
         return
     base = os.getenv('OLLAMA_BASE_URL', 'http://127.0.0.1:11434/v1').rstrip('/')
     if base.endswith('/v1'):
@@ -137,6 +138,7 @@ app.include_router(clauses.router)
 app.include_router(vam.router)
 app.include_router(checklist.router)
 app.include_router(evidence.router)
+app.include_router(workflows.router)
 
 
 @app.get('/api/health', response_model=HealthResponse)

@@ -3,15 +3,17 @@ import { ClauseComparePage } from './components/ClauseComparePage'
 import { ContractPage } from './components/ContractPage'
 import { ChecklistPage } from './components/ChecklistPage'
 import { VersionComparePage } from './components/VersionComparePage'
+import { CashFlowPage } from './components/CashFlowPage'
 import type { VamEvidenceInput } from './lib/api'
 
-type Tab = 'contract' | 'compare' | 'versions' | 'checklist'
+type Tab = 'contract' | 'compare' | 'versions' | 'checklist' | 'payments'
 
 const tabs: { key: Tab; label: string }[] = [
   { key: 'contract', label: '合同核验' },
   { key: 'compare', label: '宣传 vs 合同' },
   { key: 'versions', label: '版本对比' },
   { key: 'checklist', label: '签约前必问清单' },
+  { key: 'payments', label: '付款计划与现金流' },
 ]
 
 export default function App() {
@@ -95,6 +97,7 @@ export default function App() {
           />
         )}
         {tab === 'versions' && <VersionComparePage />}
+        {tab === 'payments' && <CashFlowPage />}
         <div hidden={tab !== 'checklist'}>
           <ChecklistPage
             key={checklistVersion}

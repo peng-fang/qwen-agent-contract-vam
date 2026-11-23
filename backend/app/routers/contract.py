@@ -20,6 +20,7 @@ from app.schemas import ContractAnalyzeResponse, RentalReviewResponse
 from app.services.contract_service import analyze_contract, analyze_contract_stream
 from app.services.clause_service import inspect_amounts
 from app.services import rental_review_service
+from app.services.report_dialogue import persist_report
 
 router = APIRouter(prefix='/api/contract', tags=['contract'])
 
@@ -170,6 +171,7 @@ async def rental_review(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
     result['file_id'] = target.name
+    result = persist_report(result, str(target))
     return RentalReviewResponse(**result)
 
 
@@ -224,6 +226,7 @@ async def rental_review_stream(
                 progress=progress,
             )
             result['file_id'] = target.name
+            result = persist_report(result, str(target))
             events.put({'type': 'result', 'result': result})
         except Exception as exc:  # noqa: BLE001
             events.put({'type': 'error', 'detail': str(exc)})

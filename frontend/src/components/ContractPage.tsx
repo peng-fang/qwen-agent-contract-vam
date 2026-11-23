@@ -53,6 +53,7 @@ export function ContractPage({
   const [loading, setLoading] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [error, setError] = useState('')
+  const [assistantReportId, setAssistantReportId] = useState<string | null>(null)
   const [assistantOpen, setAssistantOpen] = useState(false)
   const [assistantContext, setAssistantContext] = useState<AskRiskContext | null>(null)
   const [assistantRisks, setAssistantRisks] = useState<RentalRisk[]>([])
@@ -152,11 +153,13 @@ export function ContractPage({
       </Card>
 
       <RentalReviewPanel
+        key={files.filter((file) => /\.(pdf|docx|txt|md)$/i.test(file.name)).slice(0, 1).map((file) => `${file.name}:${file.size}:${file.lastModified}`).join('')}
         files={files}
         checklistEvidence={checklistEvidence}
         onAddChecklist={onAddChecklist}
         onRemoveChecklist={onRemoveChecklist}
-        onAsk={(context, risks) => {
+        onAsk={(context, risks, reportId) => {
+          setAssistantReportId(reportId ?? null)
           setAssistantContext(context)
           setAssistantRisks(risks)
           setAssistantOpen(true)
@@ -320,6 +323,7 @@ export function ContractPage({
       </div>
 
       <AskAssistantDrawer
+        reportId={assistantReportId}
         open={assistantOpen}
         context={assistantContext}
         risks={assistantRisks}

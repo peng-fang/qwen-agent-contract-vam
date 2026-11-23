@@ -117,7 +117,17 @@ class EvidenceSearchResponse(BaseModel):
     matches: List[EvidenceMatch]
 
 
+class RefundQuestion(BaseModel):
+    field: str
+    question: str
+    condition: str | None = None
+    evidence_id: str | None = None
+
+
 class ClauseExtractionResponse(BaseModel):
+    task_id: str | None = None
+    task_revision: int | None = None
+    refund_question: RefundQuestion | None = None
     documents: List[Dict[str, Any]]
     clauses: List[Dict[str, Any]]
     matches: List[Dict[str, Any]]
@@ -125,6 +135,22 @@ class ClauseExtractionResponse(BaseModel):
     warnings: List[str]
     evidence_review: Dict[str, Any]
     risk: Dict[str, Any]
+
+
+class RelatedEvidenceExcerpt(BaseModel):
+    evidence_id: str
+    filename: str
+    page: int
+    char_start: int
+    char_end: int
+    quote: str
+    relation: str
+
+
+class RelatedEvidence(BaseModel):
+    related: List[RelatedEvidenceExcerpt]
+    extra_quote_chars: int
+    omitted: int
 
 
 class EvidenceResolveResponse(BaseModel):
@@ -138,6 +164,7 @@ class EvidenceResolveResponse(BaseModel):
     quote: str
     context: str
     verified: bool
+    related_evidence: RelatedEvidence | None = None
 
 
 class VersionDiffDocument(BaseModel):
@@ -154,6 +181,7 @@ class VersionCompareResponse(BaseModel):
 
 
 class RentalReviewResponse(BaseModel):
+    report_id: str | None = None
     filename: str
     file_id: str | None = None
     file_type: str

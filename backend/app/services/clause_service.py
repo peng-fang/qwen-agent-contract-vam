@@ -103,8 +103,8 @@ def compare_versions(
     return diff_documents(old_document, new_document)
 
 
-def resolve_evidence(evidence_id: str) -> Dict[str, Any]:
-    return _resolve_evidence(evidence_id)
+def resolve_evidence(evidence_id: str, include_related: bool = False) -> Dict[str, Any]:
+    return _resolve_evidence(evidence_id, include_related=include_related)
 
 
 __all__ = [

@@ -245,6 +245,7 @@ export interface RentalRisk {
 }
 
 export interface RentalReviewResult {
+  report_id?: string
   filename: string
   file_id?: string | null
   file_type: string
@@ -546,6 +547,22 @@ export interface RiskAssessment {
   note: string
 }
 
+export interface RelatedEvidenceExcerpt {
+  evidence_id: string
+  filename: string
+  page: number
+  char_start: number
+  char_end: number
+  quote: string
+  relation: 'qualifier' | 'reference'
+}
+
+export interface RelatedEvidence {
+  related: RelatedEvidenceExcerpt[]
+  extra_quote_chars: number
+  omitted: number
+}
+
 export interface ResolvedEvidence {
   evidence_id: string
   document_id: string
@@ -557,6 +574,7 @@ export interface ResolvedEvidence {
   quote: string
   context: string
   verified: boolean
+  related_evidence?: RelatedEvidence
 }
 
 export interface VersionDiffRow {
@@ -577,6 +595,8 @@ export interface VersionCompareResult {
 }
 
 export interface ClauseExtractionResult {
+  task_id?: string
+  task_revision?: number
   documents: {
     document_id: string
     file_id?: string
@@ -600,9 +620,10 @@ export async function extractClauses(files: File[], roles?: string[]) {
   return res.data
 }
 
-export async function resolveEvidence(evidenceId: string) {
+export async function resolveEvidence(evidenceId: string, includeRelated = false) {
   const res = await axios.get<ResolvedEvidence>(
     `/api/contract/evidence/${encodeURIComponent(evidenceId)}`,
+    { params: { include_related: includeRelated } },
   )
   return res.data
 }

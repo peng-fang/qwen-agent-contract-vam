@@ -152,6 +152,9 @@ def _llm_cfg(model: Optional[str] = None) -> Dict[str, Any]:
 
 
 def _chat(system: str, user: str, max_tokens: int = 2800, model: Optional[str] = None, json_mode: bool = False) -> str:
+    if os.getenv('REVIEW_MODEL_PROVIDER', '').strip().lower() == 'openai':
+        from backend.app.services.workflow_llm import generate_text
+        return generate_text(system, user)
     cfg = _llm_cfg(model)
     cfg['generate_cfg'] = {**cfg['generate_cfg'], 'max_tokens': max_tokens}
     if json_mode and os.getenv('OLLAMA_JSON_MODE', '1').strip().lower() not in {'0', 'false', 'no'}:
