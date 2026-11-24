@@ -2,6 +2,10 @@
 
 基于 [QwenLM/Qwen-Agent](https://github.com/QwenLM/Qwen-Agent) 的课程项目。
 
+> **🚀 进入项目并操作：<http://127.0.0.1:8001/>**
+>
+> 先在仓库根目录运行 `.\start.ps1`（或双击 `start.bat`），再点击入口。开发模式使用 <http://127.0.0.1:5173/>。GitHub 不能运行本项目的 FastAPI 后端，所以这是本机启动后的入口，不是公网 Demo。
+
 新增报告连续追问、补充参数续办、付款计划与语义复核的运行方式及验收见 [四项合同工作流](docs/contract-workflows.md)。
 
 当前架构：

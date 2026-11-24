@@ -29,6 +29,14 @@ limitations under the License.
 >
 > 默认地址：<http://localhost:5173>（开发）或 <http://127.0.0.1:8001>（生产构建）。
 >
+> <a href="http://127.0.0.1:8001/"><strong>🚀 进入项目并操作 →</strong></a>
+>
+> **第一次使用：** 在仓库根目录运行 `.\start.ps1`（或双击 `start.bat`）。脚本会启动 FastAPI 并自动打开浏览器；启动完成后点击上面的入口即可操作。
+>
+> **开发模式：** 先启动后端，再在 `frontend/` 执行 `npm run dev`，打开 <http://127.0.0.1:5173/>。
+>
+> **说明：** GitHub 只托管代码，不能运行本项目的 FastAPI/Ollama 后端；这个入口指向你本机启动后的应用，不是公网在线 Demo。若需要任何人点开即用，需要把后端单独部署到公网服务。
+>
 > 协作任务：[Markdown 任务清单](docs/PROJECT_TASKS.md) · [实验计划](research/evidence-budget/NEXT_STEPS.md)（历史规划，具体完成情况以代码与验收记录为准）。
 >
 > ---
