@@ -555,6 +555,7 @@ export interface RelatedEvidenceExcerpt {
   char_end: number
   quote: string
   relation: 'qualifier' | 'reference'
+  reference_path?: { article: string; from_evidence_id: string; to_evidence_id: string }[]
 }
 
 export interface RelatedEvidence {

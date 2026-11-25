@@ -104,6 +104,10 @@ export function EvidenceDrawer({ open, evidence, file, onClose, showRelated }: P
                     {file && <button type="button" className="text-blue-600 hover:underline"
                       onClick={() => setSelection(item.evidence_id)}>定位原文</button>}
                   </div>
+                  {!!item.reference_path?.length && <p className="text-xs text-muted-foreground">
+                    {[item.reference_path[0].from_evidence_id === evidenceId ? '主证据' : '限定句',
+                      ...item.reference_path.map((step) => step.article)].join(' → ')}
+                  </p>}
                   <p className="whitespace-pre-wrap text-sm">{item.quote}</p>
                 </div>
               ))}

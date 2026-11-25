@@ -137,6 +137,12 @@ class ClauseExtractionResponse(BaseModel):
     risk: Dict[str, Any]
 
 
+class ClauseReferenceStep(BaseModel):
+    article: str
+    from_evidence_id: str
+    to_evidence_id: str
+
+
 class RelatedEvidenceExcerpt(BaseModel):
     evidence_id: str
     filename: str
@@ -145,6 +151,7 @@ class RelatedEvidenceExcerpt(BaseModel):
     char_end: int
     quote: str
     relation: str
+    reference_path: List[ClauseReferenceStep] = Field(default_factory=list)
 
 
 class RelatedEvidence(BaseModel):

@@ -26,6 +26,18 @@ CASES = (
      '第六条 线上课程也须缴纳材料费。', True),
 )
 
+PATH_CASES = (
+    ('refund', '开课前后，报名后七天内都可申请退款。',
+     '报名后七天内可以申请退款，适用阶段见第八条。', '第八条 退款阶段见第十条。',
+     '第十条 开课前后均可申请退款。', '第十条 开课后不得申请退款。'),
+    ('renewal', '会员按月续费，取消无需提前通知。',
+     '会员按月续费，取消条件见第六条。', '第六条 取消通知期以第九条为准。',
+     '第九条 取消无需提前通知。', '第九条 取消须提前三十日通知。'),
+    ('materials', '线上课程免收材料费。',
+     '课程材料费为100元，线上课程例外见第八条。', '第八条 线上课程收费标准见第十二条。',
+     '第十二条 线上课程免收材料费。', '第十二条 线上课程也须缴纳材料费。'),
+)
+
 OTHER_TERMS = ('会员可在工作日上午九时到下午六时之间将联系方式及通信地址的变更通知送交服务中心。'
                '\n办理资料变更时应出示证件原件。')
 
@@ -54,6 +66,30 @@ def evaluate(budget):
             rows.append({'case': document.document_id, 'family': family, 'method': method,
                          'gold': gold, 'qualifier_present': qualifier in text,
                          'promo': promo, 'contract': text, 'contract_chars': len(text), 'related': related})
+    return rows
+
+
+def evaluate_paths(budget):
+    rows = []
+    for family, promo, main, bridge, aligned, opposed in PATH_CASES:
+        for gold, terminal in (('consistent', aligned), ('conflict', opposed)):
+            case_id = f'{family}-{gold}'
+            pages = [PageText(1, f'{main}\n{OTHER_TERMS}'), PageText(2, bridge),
+                     PageText(3, terminal)]
+            document = Document(case_id, 'contract.txt', DocRole.CONTRACT, pages)
+            anchor = EvidenceSpan(case_id, document.filename, document.role, 1, 'p1', 0, len(main), main)
+            for method, max_hops in (('full', None), ('one_hop', 1), ('two_hop', 2)):
+                related = []
+                if max_hops is None:
+                    text = '\n'.join(page.text for page in pages)
+                else:
+                    selected = select_related_evidence(document, anchor, budget=budget, max_hops=max_hops)
+                    related = selected['related']
+                    text = '\n'.join([main, *(item['quote'] for item in related)])
+                rows.append({'case': case_id, 'family': family, 'method': method,
+                             'gold': gold, 'qualifier_present': terminal in text,
+                             'complete_chain_present': bridge in text and terminal in text,
+                             'promo': promo, 'contract': text, 'contract_chars': len(text), 'related': related})
     return rows
 
 
@@ -93,15 +129,17 @@ def run_ollama(rows, model, port):
 
 def summarize(rows):
     summary = {}
-    for method in ('full', 'nearby', 'linked', 'anchor_only'):
+    for method in dict.fromkeys(row['method'] for row in rows):
         group = [row for row in rows if row['method'] == method]
         scores = {'n': len(group), 'qualifiers_retrieved': sum(row['qualifier_present'] for row in group),
                   'contract_chars': sum(row['contract_chars'] for row in group)}
+        if 'complete_chain_present' in group[0]:
+            scores['complete_chains_retrieved'] = sum(row['complete_chain_present'] for row in group)
         if all('prediction' in row for row in group):
             scores['correct'] = sum(row['prediction'] == row['gold'] for row in group)
             scores['both_variants_correct'] = sum(
                 all(row['prediction'] == row['gold'] for row in group if row['family'] == family)
-                for family, *_ in CASES
+                for family in dict.fromkeys(row['family'] for row in group)
             )
             for field in ('input_tokens', 'output_tokens'):
                 values = [row[field] for row in group]
@@ -112,6 +150,8 @@ def summarize(rows):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--dataset', choices=('qualifiers', 'paths'), default='qualifiers',
+                        help='限定句基线或两跳引用链开发样例')
     parser.add_argument('--budget', type=int, default=48, help='额外引文的字符预算')
     parser.add_argument('--out', type=Path, help='保存逐案 JSON')
     parser.add_argument('--live', action='store_true', help='实际调用本机 Ollama')
@@ -120,7 +160,7 @@ def main():
     args = parser.parse_args()
     if args.budget < 0:
         parser.error('--budget 必须为非负数')
-    rows = evaluate(args.budget)
+    rows = evaluate_paths(args.budget) if args.dataset == 'paths' else evaluate(args.budget)
     model = None
     try:
         if args.live:
@@ -130,7 +170,8 @@ def main():
         print(json.dumps(summary, ensure_ascii=False, indent=2))
         if args.out:
             args.out.parent.mkdir(parents=True, exist_ok=True)
-            args.out.write_text(json.dumps({'protocol': 'linked-evidence-dev-v1',
+            protocol = 'clause-paths-dev-v1' if args.dataset == 'paths' else 'linked-evidence-dev-v1'
+            args.out.write_text(json.dumps({'protocol': protocol,
                 'extra_quote_chars_budget': args.budget, 'model': model, 'summary': summary, 'rows': rows,
             }, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
 
