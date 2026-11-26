@@ -154,10 +154,18 @@ class RelatedEvidenceExcerpt(BaseModel):
     reference_path: List[ClauseReferenceStep] = Field(default_factory=list)
 
 
+class UnresolvedClauseReference(BaseModel):
+    reference: str
+    from_evidence_id: str
+    reason: Literal['missing', 'ambiguous', 'subpart', 'depth_limit']
+
+
 class RelatedEvidence(BaseModel):
     related: List[RelatedEvidenceExcerpt]
     extra_quote_chars: int
     omitted: int
+    unresolved_references: List[UnresolvedClauseReference] = Field(default_factory=list)
+    unresolved_reference_count: int = 0
 
 
 class EvidenceResolveResponse(BaseModel):

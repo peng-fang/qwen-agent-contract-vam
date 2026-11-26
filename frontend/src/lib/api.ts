@@ -562,6 +562,12 @@ export interface RelatedEvidence {
   related: RelatedEvidenceExcerpt[]
   extra_quote_chars: number
   omitted: number
+  unresolved_references?: {
+    reference: string
+    from_evidence_id: string
+    reason: 'missing' | 'ambiguous' | 'subpart' | 'depth_limit'
+  }[]
+  unresolved_reference_count?: number
 }
 
 export interface ResolvedEvidence {

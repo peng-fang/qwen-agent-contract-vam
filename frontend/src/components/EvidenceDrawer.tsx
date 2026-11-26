@@ -4,6 +4,13 @@ import { Button } from '@/components/ui/button'
 import { resolveEvidence, type RelatedEvidence } from '@/lib/api'
 import { PdfViewer } from './PdfViewer'
 
+const referenceIssues = {
+  missing: '正文中未定位到目标条款',
+  ambiguous: '正文有多处同号条款',
+  subpart: '请核对具体款项',
+  depth_limit: '超出本次引用追踪层数',
+} as const
+
 export interface EvidenceDetail {
   quote: string
   filename?: string
@@ -26,6 +33,8 @@ export function EvidenceDrawer({ open, evidence, file, onClose, showRelated }: P
   const [lookup, setLookup] = useState<{ id: string; result?: RelatedEvidence } | null>(null)
   const [selection, setSelection] = useState<string | null>(null)
   const relatedLookup = lookup?.id === evidenceId ? lookup : null
+  const unresolved = relatedLookup?.result?.unresolved_references ?? []
+  const hiddenUnresolved = (relatedLookup?.result?.unresolved_reference_count ?? 0) - unresolved.length
   const focus = relatedLookup?.result?.related.find((item) => item.evidence_id === selection)
 
   useEffect(() => {
@@ -111,7 +120,16 @@ export function EvidenceDrawer({ open, evidence, file, onClose, showRelated }: P
                   <p className="whitespace-pre-wrap text-sm">{item.quote}</p>
                 </div>
               ))}
-              {relatedLookup?.result && !relatedLookup.result.related.length && !relatedLookup.result.omitted && (
+              {unresolved.length > 0 && <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-950">
+                <p className="font-medium">需要核对的引用</p>
+                <ul className="mt-1 space-y-1">
+                  {unresolved.map((item) => <li key={`${item.from_evidence_id}-${item.reference}`}>
+                    {item.reference} · {referenceIssues[item.reason]}
+                  </li>)}
+                </ul>
+                {hiddenUnresolved > 0 && <p className="mt-1">另有 {hiddenUnresolved} 处引用待核对。</p>}
+              </div>}
+              {relatedLookup?.result && !relatedLookup.result.related.length && !relatedLookup.result.omitted && !unresolved.length && (
                 <p className="text-xs text-muted-foreground">未找到可识别的相邻限定句或条号引用。</p>
               )}
               {Boolean(relatedLookup?.result?.omitted) && (
